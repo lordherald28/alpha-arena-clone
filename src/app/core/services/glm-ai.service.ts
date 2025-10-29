@@ -101,7 +101,7 @@ Analiza el siguiente escenario de mercado para el par ${environment.trading.pair
 - El precio actual está ${lastCandle.close > lastSma50 ? 'por encima' : 'por debajo'} de la SMA 50.
 - La SMA 20 está ${lastSma20 > lastSma50 ? 'por encima' : 'por debajo'} de la SMA 50, indicando una tendencia ${lastSma20 > lastSma50 ? 'alcista' : 'bajista'} a mediano plazo.
 - El RSI se encuentra en la zona de ${lastRsi > 70 ? 'sobrecompra' : lastRsi < 30 ? 'sobreventa' : 'neutral'}.
-- El cruce del MACD es ${lastMacd.MACD && lastMacd.MACD > lastMacd.signal && lastMacd.signal ? 'alcista (MACD por encima de la señal)' : 'bajista (MACD por debajo de la señal)'}.
+- El cruce del MACD es ${lastMacd?.MACD != null && lastMacd?.signal != null && lastMacd.MACD > lastMacd.signal ? 'alcista (MACD por encima de la señal)' : 'bajista (MACD por debajo de la señal)'}.
 
 **Tarea:**
 Basado en toda la información proporcionada, determina la acción de trading más prudente.
