@@ -2,9 +2,9 @@ export const environment = {
     production: false,
     // --- CONFIGURA TUS CLaves AQUÍ ---
     coinex: {
-        apiKey: 'TU_API_KEY_DE_COINEX_DEMO', // Usa una clave de la cuenta DEMO
-        apiSecret: 'TU_API_SECRET_DE_COINEX_DEMO',
-        baseUrl: 'https://api.coinex.com/v1' // O la URL de demo si es diferente
+        apiKey: '67B9588D3B744755A1FD7BCA62FE3A41', // Usa una clave de la cuenta DEMO
+        apiSecret: '4E63C3DAD4494B8AD52FC391F83F74EA2D6597FAE6CDAE58',
+        baseUrl: 'https://api.coinex.com/v2' // O la URL de demo si es diferente
     },
     glmAi: {
         apiKey: 'TU_API_KEY_DE_GLM-4',

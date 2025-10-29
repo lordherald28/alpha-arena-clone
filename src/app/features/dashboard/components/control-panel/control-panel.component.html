@@ -1,8 +1,9 @@
+<!-- ESTE ES EL CÓDIGO CORRECTO PARA EL CONTROL REMOTO -->
 <div class="control-panel">
-  <button (click)="start.emit()" [disabled]="isRunning" class="btn btn-start">
+  <button (click)="start.emit()" [disabled]="isRunning()" class="btn btn-start">
     Iniciar Análisis
   </button>
-  <button (click)="stop.emit()" [disabled]="!isRunning" class="btn btn-stop">
+  <button (click)="stop.emit()" [disabled]="!isRunning()" class="btn btn-stop">
     Detener
   </button>
 </div>

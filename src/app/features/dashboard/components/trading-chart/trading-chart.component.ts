@@ -1,7 +1,7 @@
 import { Component, input, effect, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Candlestick } from '../../../../core/models';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts';
 
 @Component({
   selector: 'app-trading-chart',
@@ -47,12 +47,13 @@ export class TradingChartComponent implements OnInit, OnDestroy {
           horzLines: { color: '#2a2e39' },
         },
       });
-      this.candlestickSeries = this.chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
+      this.candlestickSeries = this.chart.addSeries(CandlestickSeries,{
+        upColor: '#4caf50',
+        downColor: '#f44336',
+        borderDownColor: '#f44336',
+        borderUpColor: '#4caf50',
+        wickDownColor: '#f44336',
+        wickUpColor: '#4caf50',
       });
     }
   }
