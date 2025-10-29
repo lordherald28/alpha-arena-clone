@@ -1,3 +1,22 @@
-<p>
-  ai-response-panel works!
-</p>
+<div class="panel">
+  <h3>Respuesta de la IA (GLM-4)</h3>
+  @if (aiResponse(); as response) {
+    <div class="response-summary">
+      <div class="decision" [class.buy]="response.decision === 'BUY'" [class.sell]="response.decision === 'SELL'" [class.hold]="response.decision === 'HOLD'">
+        Decisión: <strong>{{ response.decision }}</strong>
+      </div>
+      <div class="confidence">
+        Confianza: {{ (response.confidence * 100).toFixed(1) }}%
+      </div>
+      <div class="reason">
+        <strong>Razón:</strong> {{ response.reason }}
+      </div>
+    </div>
+    <details class="json-details">
+      <summary>Respuesta JSON Cruda</summary>
+      <pre>{{ response.rawJson | json }}</pre>
+    </details>
+  } @else {
+    <p>Esperando análisis de la IA...</p>
+  }
+</div>

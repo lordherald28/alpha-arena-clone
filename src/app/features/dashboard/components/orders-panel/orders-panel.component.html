@@ -1,3 +1,12 @@
-<p>
-  orders-panel works!
-</p>
+<div class="panel">
+  <h3>Órdenes Abiertas / Historial</h3>
+  <div class="order-list">
+    <div *ngFor="let order of mockOrders" class="order-item" [class.buy]="order.side === 'buy'"
+      [class.sell]="order.side === 'sell'">
+      <span class="side">{{ order.side.toUpperCase() }}</span>
+      <span class="amount">{{ order.amount }}</span>
+      <span class="price">{{ order.price | currency:'USD' }}</span>
+      <span class="status">{{ order.status }}</span>
+    </div>
+  </div>
+</div>

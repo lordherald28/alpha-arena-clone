@@ -1,3 +1,8 @@
-<p>
-  control-panel works!
-</p>
+<div class="control-panel">
+  <button (click)="start.emit()" [disabled]="isRunning" class="btn btn-start">
+    Iniciar Análisis
+  </button>
+  <button (click)="stop.emit()" [disabled]="!isRunning" class="btn btn-stop">
+    Detener
+  </button>
+</div>
