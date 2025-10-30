@@ -6,6 +6,7 @@ import { TradingChartComponent } from './components/trading-chart/trading-chart.
 import { OrdersPanelComponent } from './components/orders-panel/orders-panel.component';
 import { AiResponsePanelComponent } from './components/ai-response-panel/ai-response-panel.component';
 import { TradingExecutionService } from '../../core/services/trading-execution.service';
+import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,7 +16,8 @@ import { TradingExecutionService } from '../../core/services/trading-execution.s
     ControlPanelComponent,
     TradingChartComponent,
     OrdersPanelComponent,
-    AiResponsePanelComponent
+    AiResponsePanelComponent,
+    PaperTradingDashboardComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

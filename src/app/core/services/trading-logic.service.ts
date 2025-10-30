@@ -99,7 +99,7 @@ export class TradingLogicService {
   private executePaperOrder(decision: 'BUY' | 'SELL' | 'HOLD'): void {
     const order = {
       market: environment.trading.pair,
-      side: decision.toLowerCase() as 'buy' | 'sell',
+      side: decision.toLowerCase() as 'BUY' | 'SELL',
       amount: '0.001' // Cantidad fija para testing
     };
 

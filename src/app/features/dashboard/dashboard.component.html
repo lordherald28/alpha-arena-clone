@@ -17,9 +17,10 @@
     <section class="chart-section">
       <app-trading-chart [candles]="candles()"></app-trading-chart>
     </section>
-
+    
     <aside class="side-panels">
-      <app-orders-panel></app-orders-panel>
+      <app-paper-trading-dashboard></app-paper-trading-dashboard>
+      <!-- <app-orders-panel></app-orders-panel> -->
       <app-ai-response-panel [aiResponse]="aiResponse()"></app-ai-response-panel>
     </aside>
   </div>

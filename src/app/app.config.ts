@@ -4,12 +4,13 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient } from '@angular/common/http';
 import { CoinexService } from './core/services/coinex.service';
+import { PaperTradingService } from './core/services/paper-trading.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(),
-    { provide: 'ITradingService', useClass: CoinexService }
+    { provide: 'ITradingService', useClass: PaperTradingService }
   ]
 };

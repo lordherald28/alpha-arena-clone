@@ -13,6 +13,12 @@ export const environment = {
         interval: '5min',
         candleLimit: 700,
     },
+    paperTrading: {
+        enabled: true, // Cambiar a false para trading real
+        initialBalance: 10,
+        fee: 0.001, // 0.1%
+        defaultRisk: 0.02 // 2%
+    },
     glmAi: {
         apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'

@@ -10,9 +10,9 @@ import { CoinexService } from './coinex.service';
 })
 export class PaperTradingService implements ITradingService {
   private balance = signal<PaperBalance>({
-    USDT: 1000,  // Balance inicial en USDT
+    USDT: 10,  // Balance inicial en USDT
     BTC: 0,
-    totalUSDT: 1000
+    totalUSDT: 10
   });
 
   private openOrders = signal<TradingOrder[]>([]);
@@ -20,18 +20,20 @@ export class PaperTradingService implements ITradingService {
   private orderHistory = signal<TradingOrder[]>([]);
 
   private config: PaperTradingConfig = {
-    initialBalance: 1000,
+    initialBalance: 10,
     fee: 0.001, // 0.1% de comisión
     defaultRiskPercent: 0.02 // 2% de riesgo por operación
   };
 
-  constructor() {
+  constructor(
+    private readonly serviceCoinex: CoinexService
+
+  ) {
     console.log('📊 Paper Trading iniciado con balance:', this.balance());
   }
 
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
-    const serviceCoinex = inject(CoinexService);
-    return serviceCoinex.getCandles(market, interval, limit)
+    return this.serviceCoinex.getCandles(market, interval, limit)
   }
 
   /**
@@ -56,7 +58,7 @@ export class PaperTradingService implements ITradingService {
   /**
    * Colocar orden de mercado simulada
    */
-  placeMarketOrder(params: { market: string; side: 'buy' | 'sell'; amount: string; }): Observable<any> {
+  placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL'; amount: string; }): Observable<any> {
     return new Observable(observer => {
       try {
         const currentPrice = this.getCurrentMarketPrice(); // Necesitarás implementar esto
@@ -105,10 +107,10 @@ export class PaperTradingService implements ITradingService {
   /**
    * Calcular Take Profit y Stop Loss
    */
-  private calculateTPnSL(side: 'buy' | 'sell', entryPrice: number): { tp: number, sl: number } {
+  private calculateTPnSL(side: 'BUY' | 'SELL', entryPrice: number): { tp: number, sl: number } {
     const riskRewardRatio = 2; // 1:2 risk-reward
 
-    if (side === 'buy') {
+    if (side === 'BUY') {
       const sl = entryPrice * (1 - this.config.defaultRiskPercent);
       const tp = entryPrice * (1 + (this.config.defaultRiskPercent * riskRewardRatio));
       return { tp, sl };
@@ -125,7 +127,7 @@ export class PaperTradingService implements ITradingService {
   private executeOrder(order: TradingOrder): void {
     const fee = order.amount * order.price * this.config.fee;
 
-    if (order.side === 'buy') {
+    if (order.side === 'BUY') {
       // COMPRA: Gastar USDT, recibir BTC
       const cost = order.amount * order.price + fee;
 
@@ -173,7 +175,7 @@ export class PaperTradingService implements ITradingService {
     openOrders.forEach(order => {
       let closeReason: 'tp' | 'sl' | null = null;
 
-      if (order.side === 'buy') {
+      if (order.side === 'BUY') {
         // Para órdenes de COMPRA
         if (order.tp && currentPrice >= order.tp) {
           closeReason = 'tp';
@@ -210,7 +212,7 @@ export class PaperTradingService implements ITradingService {
   private calculatePNL(order: TradingOrder): number {
     if (!order.closePrice) return 0;
 
-    if (order.side === 'buy') {
+    if (order.side === 'BUY') {
       return (order.closePrice - order.price) * order.amount;
     } else {
       return (order.price - order.closePrice) * order.amount;
@@ -258,7 +260,7 @@ export class PaperTradingService implements ITradingService {
     // Implementar según tu fuente de datos
     // Puedes usar el último precio de las velas de CoinEx
     // Por ahora, retornamos un valor fijo
-    return 50000; // Precio ejemplo
+    return 50000; // Precio ejemplo //TODO signal
   }
 
   /**

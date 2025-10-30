@@ -24,7 +24,7 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
       const candleData = this.candles();
       // this.debugData(); // ← Agrega esta línea temporalmente
 
-      console.log('🕯️ Datos recibidos en componente:', candleData);
+      // console.log('🕯️ Datos recibidos en componente:', candleData);
 
       if (candleData && candleData.length > 0 && this.candlestickSeries) {
         const formattedData: CandlestickData[] = candleData.map(c => {

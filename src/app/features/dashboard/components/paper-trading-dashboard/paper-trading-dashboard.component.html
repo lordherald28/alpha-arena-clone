@@ -1,0 +1,59 @@
+<div class="paper-dashboard">
+  <h3>📊 Paper Trading Dashboard</h3>
+
+  <!-- Balance -->
+  <div class="balance-card">
+    <h4>Balance Virtual</h4>
+    <div class="balance-items">
+      <div class="balance-item">
+        <span>USDT:</span>
+        <span>{{ balance.USDT | number:'1.2-2' }}</span>
+      </div>
+      <div class="balance-item">
+        <span>BTC:</span>
+        <span>{{ balance.BTC | number:'1.6-6' }}</span>
+      </div>
+      <div class="balance-item total">
+        <span>Total (USDT):</span>
+        <span>{{ balance.totalUSDT | number:'1.2-2' }}</span>
+      </div>
+    </div>
+    <button (click)="resetTrading()" class="btn btn-warning">🔄 Reiniciar</button>
+  </div>
+
+  <!-- Órdenes Abiertas -->
+  <div class="orders-section">
+    <h4>Órdenes Abiertas ({{ openOrders.length }})</h4>
+    <div *ngFor="let order of openOrders" class="order-card" [class.buy]="order.side === 'buy'"
+      [class.sell]="order.side === 'sell'">
+      <div class="order-header">
+        <span class="side">{{ order.side.toUpperCase() }}</span>
+        <span class="amount">{{ order.amount }} BTC</span>
+      </div>
+      <div class="order-details">
+        <div>Precio: ${{ order.price | number:'1.2-2' }}</div>
+        <div>TP: ${{ order.tp | number:'1.2-2' }}</div>
+        <div>SL: ${{ order.sl | number:'1.2-2' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="history-section">
+    <h4>Historial ({{ closedOrders.length }})</h4>
+    <div *ngFor="let order of closedOrders.slice(-5)" class="history-card" [class.profit]="(order.pnl || 0) > 0"
+      [class.loss]="(order.pnl || 0) < 0">
+      <div class="history-header">
+        <span class="side">{{ order.side.toUpperCase() }}</span>
+        <span class="result" [class.text-success]="(order.pnl || 0) > 0" [class.text-danger]="(order.pnl || 0) < 0">
+          {{ order.pnl | number:'1.2-2' }} USDT
+        </span>
+      </div>
+      <div class="history-details">
+        <div>Entrada: ${{ order.price | number:'1.2-2' }}</div>
+        <div>Salida: ${{ order.closePrice | number:'1.2-2' }}</div>
+        <div>Razón: {{ order.closeReason }}</div>
+      </div>
+    </div>
+  </div>
+</div>

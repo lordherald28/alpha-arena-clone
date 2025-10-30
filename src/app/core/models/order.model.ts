@@ -39,7 +39,7 @@ export interface Order {
 export interface TradingOrder {
     id: string;
     market: string;
-    side: 'buy' | 'sell';
+    side: 'BUY' | 'SELL';
     type: 'market' | 'limit';
     amount: number;
     price: number; // Precio de ejecución

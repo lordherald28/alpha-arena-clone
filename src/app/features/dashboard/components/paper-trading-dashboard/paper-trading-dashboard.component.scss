@@ -1,0 +1,66 @@
+  .paper-dashboard {
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin: 10px;
+      background: #f8f9fa;
+  }
+
+  .balance-card,
+  .orders-section,
+  .history-section {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: white;
+  }
+
+  .balance-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+  }
+
+  .total {
+      font-weight: bold;
+      border-top: 1px solid #eee;
+      padding-top: 5px;
+  }
+
+  .order-card,
+  .history-card {
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 4px;
+      border-left: 4px solid;
+  }
+
+  .buy {
+      border-left-color: #4caf50;
+      background: #f1f8e9;
+  }
+
+  .sell {
+      border-left-color: #f44336;
+      background: #ffebee;
+  }
+
+  .profit {
+      border-left-color: #4caf50;
+  }
+
+  .loss {
+      border-left-color: #f44336;
+  }
+
+  .order-header,
+  .history-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+  }
+
+  .btn {
+      margin: 5px;
+  }
