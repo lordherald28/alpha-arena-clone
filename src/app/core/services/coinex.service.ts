@@ -1,44 +1,65 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
-import { Candlestick, Order } from '../models';
-import { environment } from '../../environments/environment';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, map, throwError } from 'rxjs';
+import { Candlestick } from '../models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CoinexService {
-  private baseUrl = environment.coinex.baseUrl;
+  private readonly BASE_URL = '/api';
+
+  // Intervalos válidos según CoinEx
+  private readonly VALID_INTERVALS = [
+    '1min', '3min', '5min', '15min', '30min',
+    '1h', '2h', '4h', '6h', '12h',
+    '1day', '3day', '1week', '1month'
+  ];
 
   constructor(private http: HttpClient) { }
 
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
-    const url = `${this.baseUrl}/market/kline?market=${market}&type=${interval}&limit=${limit}`;
-    return this.http.get<any[][]>(url).pipe(
-      map(data => data.map(item => ({
-        timestamp: item[0],
-        open: parseFloat(item[1]),
-        high: parseFloat(item[2]),
-        low: parseFloat(item[3]),
-        close: parseFloat(item[4]),
-        volume: parseFloat(item[5])
-      })))
-    );
-  }
+    // Validar que el intervalo sea válido
+    if (!this.VALID_INTERVALS.includes(interval)) {
+      return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
+    }
 
-  // NOTA: Colocar órdenes es más complejo y requiere firma HMAC.
-  // Esto es un placeholder para mostrar la intención.
-  // En un caso real, esto debería llamar a un backend tuyo.
-  placeOrder(order: { market: string; type: string; side: string; amount: string; price: string }): Observable<any> {
-    console.warn('La colocación de órdenes debe hacerse a través de un backend seguro por razones de firma de API.');
-    // Ejemplo de cómo sería la llamada (no funcionará sin firma)
-    // const url = `${this.baseUrl}/spot/order`;
-    // const body = { ...order, access_id: environment.coinex.apiKey };
-    // const headers = this.createSignedHeaders(body); // Necesitarías una función para firmar
-    // return this.http.post(url, body, { headers });
-    return new Observable(observer => {
-      observer.next({ status: 'simulated', message: 'Order would be placed here' });
-      observer.complete();
+    // const url = `${this.BASE_URL}/spot/kline`;
+    const url = `${this.BASE_URL}/futures/kline?market=${market}&limit=${limit}&period=${interval}`;
+    // Construir parámetros cuidadosamente
+    const params = new HttpParams()
+      .set('market', market.toUpperCase()) // Asegurar mayúsculas
+      .set('type', interval)
+      .set('limit', limit.toString());
+
+    console.log('🔍 Parámetros enviados:', {
+      market: market.toUpperCase(),
+      type: interval,
+      limit: limit.toString()
     });
+
+    return this.http.get<any>(url).pipe(
+      map(response => {
+        console.log('📨 Respuesta RAW de CoinEx:', response);
+
+        if (response.code === 0 && response.data) {
+          // ✅ MAPEO CORREGIDO - CoinEx devuelve objetos, no arrays
+          const candles = response.data.map((item: any) => ({
+            timestamp: item.created_at, // Ya está en milisegundos
+            open: parseFloat(item.open), // Convertir string a number
+            high: parseFloat(item.high), // Convertir string a number
+            low: parseFloat(item.low),   // Convertir string a number
+            close: parseFloat(item.close), // Convertir string a number
+            volume: parseFloat(item.volume) // Convertir string a number
+          }));
+
+          console.log('✅ Velas convertidas correctamente:', candles.length);
+          console.log('📊 Ejemplo de vela:', candles[0]);
+          return candles;
+        } else {
+          throw new Error(`CoinEx Error ${response.code}: ${response.message}`);
+        }
+      })
+    );
   }
 }

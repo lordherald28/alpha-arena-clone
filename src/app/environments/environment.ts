@@ -7,12 +7,12 @@ export const environment = {
         baseUrl: 'https://api.coinex.com/v2' // O la URL de demo si es diferente
     },
     glmAi: {
-        apiKey: 'TU_API_KEY_DE_GLM-4',
+        apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
     },
     trading: {
         pair: 'BTCUSDT', // Par de trading por defecto
-        interval: '1h',   // Intervalo de velas (1h, 4h, 1d)
+        interval: '5min',   // Intervalo de velas (1h, 4h, 1d)
         candleLimit: 100  // Cantidad de velas para el análisis
     }
 };

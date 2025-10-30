@@ -21,7 +21,9 @@ export class TradingLogicService {
   constructor(
     private coinexService: CoinexService,
     private glmAiService: GlmAiService
-  ) { }
+  ) {
+    // this.coinexService.getCandlesWithFetch('BTCUSDT', '1min', 5).then(console.log);
+  }
 
   public startAnalysis(): void {
     if (this.isRunning()) return;
@@ -78,9 +80,9 @@ export class TradingLogicService {
     };
 
     console.warn(`Ejecutando orden simulada: ${decision}`);
-    this.coinexService.placeOrder(order).subscribe(result => {
-      console.log('Resultado de la orden:', result);
-      // Aquí actualizarías el panel de órdenes
-    });
+    // this.coinexService.placeOrder(order).subscribe(result => {
+    //   console.log('Resultado de la orden:', result);
+    //   // Aquí actualizarías el panel de órdenes
+    // });
   }
 }
