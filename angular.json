@@ -68,8 +68,7 @@
               "proxyConfig": "proxy.conf.json"
             },
             "development": {
-              "buildTarget": "alpha-arena-clone:build:development",
-              "proxyConfig": "proxy.conf.json" 
+              "buildTarget": "alpha-arena-clone:build:development"
             }
           },
           "defaultConfiguration": "development"
