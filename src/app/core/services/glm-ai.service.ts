@@ -80,7 +80,7 @@ export class GlmAiService {
 
     try {
       // ✅ CÁLCULOS CORREGIDOS con manejo de errores
-      const rsi = RSI.calculate({ period: 14, values: closes });
+      const rsi = RSI.calculate({ period: 7, values: closes });
       const ema660 = EMA.calculate({ period: 660, values: closes });
 
       // ✅ ATR CORREGIDO - Verifica el formato específico
@@ -186,7 +186,7 @@ MARKET CONTEXT
     INDICATORS(most recent value)
     ema660: ${lastEma660}
     atr14: ${lastAtr14}
-    rsi14: ${lastRsi}
+    rsi7: ${lastRsi}
     macd_line: ${lastMacd?.MACD}
     macd_signal: ${lastMacd?.signal}
     macd_histogram: ${lastMacd?.histogram}
@@ -207,7 +207,7 @@ ENTRY SETUP EVALUATION
    Evaluate if SELL is still reasonable now.
 
 2. Long candidate logic:
-    - Mirror idea: If price is above ema660 AND RSI is not overbought(rsi14 < 70) AND MACD cross is bullish,
+    - Mirror idea: If price is above ema660 AND RSI is not overbought(rsi7 < 70) AND MACD cross is bullish,
       that suggests continuation to the upside.That is a potential BUY setup.
 
 3. HOLD logic:

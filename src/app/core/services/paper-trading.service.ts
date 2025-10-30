@@ -145,7 +145,7 @@ export class PaperTradingService implements ITradingService {
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ COMPRA ejecutada: ${order.amount} BTC @ $${order.price}`);
+        console.log(`✅ COMPRA ejecutada: ${order.amount} USDT @ $${order.price}`);
       } else {
         throw new Error('Saldo insuficiente en paper trading');
       }
