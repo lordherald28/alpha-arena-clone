@@ -38,7 +38,7 @@ export class CoinexService implements ITradingService {
       return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
     }
 
-    const url = `${this.BASE_URL}/futures/market`;
+    const url = `${this.BASE_URL}/futures/kline`;
 
 
     const params = new HttpParams()
