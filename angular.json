@@ -64,8 +64,7 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "alpha-arena-clone:build:production",
-              "proxyConfig": "proxy.conf.json"
+              "buildTarget": "alpha-arena-clone:build:production"
             },
             "development": {
               "buildTarget": "alpha-arena-clone:build:development",
