@@ -57,21 +57,21 @@ export class GlmAiService {
   }
 
   // Pega esto en la consola con los datos reales
-  debugRSI() {
-    const lastRsi = 34.82; // Tu valor real
-    console.log('🔍 ANALISIS RSI MANUAL:');
-    console.log('RSI:', lastRsi);
-    console.log('¿Overbought?', lastRsi > 70); // Debe ser FALSE
-    console.log('¿Oversold?', lastRsi < 30);   // Debe ser TRUE
-    console.log('¿Zona neutral?', lastRsi >= 30 && lastRsi <= 70); // Debe ser FALSE
-  }
+  // debugRSI() {
+  //   const lastRsi = 34.82; // Tu valor real
+  //   console.log('🔍 ANALISIS RSI MANUAL:');
+  //   console.log('RSI:', lastRsi);
+  //   console.log('¿Overbought?', lastRsi > 70); // Debe ser FALSE
+  //   console.log('¿Oversold?', lastRsi < 30);   // Debe ser TRUE
+  //   console.log('¿Zona neutral?', lastRsi >= 30 && lastRsi <= 70); // Debe ser FALSE
+  // }
 
   private buildPrompt(candles: Candlestick[]): string {
     if (candles.length < 50) {
       return "No hay suficientes velas para realizar un análisis. Proporciona al menos 50 velas.";
     }
 
-    this.debugRSI();
+    // this.debugRSI();
     const closes = candles.map(c => c.close);
     const highs = candles.map(c => c.high);
     const lows = candles.map(c => c.low);

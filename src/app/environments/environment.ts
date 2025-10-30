@@ -11,7 +11,7 @@ export const environment = {
     trading: {
         pair: 'BTCUSDT',
         interval: '5min',
-        candleLimit: 700,
+        candleLimit: 1000,
     },
     paperTrading: {
         enabled: true, // Cambiar a false para trading real

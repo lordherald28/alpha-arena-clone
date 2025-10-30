@@ -1,7 +1,10 @@
 import { Component, input, effect, AfterViewInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Candlestick } from '../../../../core/models';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries, LineData, LineSeries } from 'lightweight-charts';
+
+import { EMA } from 'technicalindicators';
+
 
 @Component({
   selector: 'app-trading-chart',
@@ -14,8 +17,9 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
   @ViewChild('chartContainer') chartContainer!: ElementRef;
   public candles = input<Candlestick[]>([]);
 
-  private chart: IChartApi | undefined;
+  private chart: IChartApi | any;
   private candlestickSeries: ISeriesApi<'Candlestick'> | undefined;
+  private ema660Series: ISeriesApi<'Line'> | undefined; // ✅ Nueva serie para EMA660
 
   constructor() {
 
@@ -27,21 +31,23 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
       // console.log('🕯️ Datos recibidos en componente:', candleData);
 
       if (candleData && candleData.length > 0 && this.candlestickSeries) {
-        const formattedData: CandlestickData[] = candleData.map(c => {
-          // ✅ Lightweight Charts espera timestamp en SEGUNDOS, no milisegundos
-          const candle = {
-            time: (c.timestamp / 1000) as Time, // Convertir milisegundos a segundos
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close
-          };
-          // console.log('📈 Vela formateada para chart:', candle);
-          return candle;
-        });
+        this.updateChartWithIndicators(candleData);
+
+        // const formattedData: CandlestickData[] = candleData.map(c => {
+        //   // ✅ Lightweight Charts espera timestamp en SEGUNDOS, no milisegundos
+        //   const candle = {
+        //     time: (c.timestamp / 1000) as Time, // Convertir milisegundos a segundos
+        //     open: c.open,
+        //     high: c.high,
+        //     low: c.low,
+        //     close: c.close
+        //   };
+        //   // console.log('📈 Vela formateada para chart:', candle);
+        //   return candle;
+        // });
 
         // console.log('🎯 Total de velas a mostrar:', formattedData.length);
-        this.candlestickSeries.setData(formattedData);
+        // this.candlestickSeries.setData(formattedData);
 
         // ✅ Ajustar el zoom para mostrar todos los datos
         this.chart?.timeScale().fitContent();
@@ -50,34 +56,53 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    //     background: { color: '#1e1e1e' },
+    // textColor: '#d1d4dc',
+
     if (this.chartContainer?.nativeElement) {
       this.chart = createChart(this.chartContainer.nativeElement, {
         width: this.chartContainer.nativeElement.clientWidth,
         height: this.chartContainer.nativeElement.clientHeight || 400,
         layout: {
-          background: { color: '#1e1e1e' },
-          textColor: '#d1d4dc',
+          background: { color: '#fff' },
+          textColor: '#2e2e2eff',
         },
         grid: {
-          vertLines: { color: '#2a2e39' },
-          horzLines: { color: '#2a2e39' },
+          horzLines: { visible: false },
+          vertLines: { visible: false }
         },
         timeScale: {
           timeVisible: true,
           secondsVisible: false,
+          borderColor: '#2B2B43',
+          // ✅ AGREGAR ESTAS OPCIONES:
+          rightOffset: 12, // Espacio a la derecha
+          barSpacing: 0.5, // Espaciado entre velas
+          minBarSpacing: 0.1, // Espaciado mínimo
+          fixLeftEdge: true,
+          fixRightEdge: false,
+          shiftVisibleRangeOnNewBar: true
         }
       });
 
       // ✅ FORMA CORRECTA de agregar la serie (versiones actuales)
       this.candlestickSeries = this.chart.addSeries(CandlestickSeries, {
-        upColor: '#4caf50',
-        downColor: '#f44336',
-        borderDownColor: '#f44336',
-        borderUpColor: '#4caf50',
-        wickDownColor: '#f44336',
-        wickUpColor: '#4caf50',
+        upColor: '#f8f8f8ff',
+        downColor: '#414141ff',
+        borderDownColor: '#414141ff',
+        borderUpColor: '#414141ff',
+        wickDownColor: '#414141ff',
+        wickUpColor: '#414141ff',
       });
 
+      // ✅ Serie para EMA660
+      this.ema660Series = this.chart.addSeries(LineSeries, {
+        color: '#FF6B00', // Color naranja para EMA660
+        lineWidth: 2,
+        title: 'EMA 660',
+      });
+      // this.ema660Series = this.chart.addLineSeries({ lineWidth: 1 })
+      console.log('📊 Gráfico inicializado con series de EMA660');
       console.log('📊 Gráfico inicializado correctamente');
     }
   }
@@ -98,6 +123,99 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+ * Actualizar gráfico con velas e indicadores
+ */
+  private updateChartWithIndicators(candles: Candlestick[]): void {
+    // Preparar datos de velas
+    const candleData: CandlestickData[] = candles.map(c => ({
+      time: (c.timestamp / 1000) as Time,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close
+    }
+    
+  ));
+
+    // Calcular EMA660
+    const ema660Data = this.calculateEMA660(candles);
+
+    // ✅ Actualizar las velas
+    if (this.candlestickSeries) {
+      this.candlestickSeries.setData(candleData);
+    }
+
+    // ✅ Actualizar EMA660
+    if (this.ema660Series && ema660Data.length > 0) {
+      this.ema660Series.setData(ema660Data);
+      console.log('📈 EMA660 agregada al gráfico:', ema660Data.length + ' puntos');
+    }
+
+    // ✅ CORREGIDO: Usar setVisibleRange en lugar de fitContent
+    setTimeout(() => {
+      if (candleData.length > 0) {
+        // Ajustar el rango visible manualmente
+        this.chart?.timeScale().setVisibleRange({
+          from: candleData[0].time as Time,
+          to: candleData[candleData.length - 1].time as Time
+        });
+
+        // O también puedes probar con:
+        // this.chart?.timeScale().fitContent();
+      }
+    }, 100);
+
+    console.log('📈 Datos para gráfico:', {
+      velas: candleData.length,
+      ema660: ema660Data.length,
+      rango: {
+        desde: new Date((candleData[0].time as number) * 1000),
+        hasta: new Date((candleData[candleData.length - 1].time as number) * 1000)
+      }
+    });
+  }
+
+  /**
+   * Calcular EMA660 para el gráfico
+   */
+  private calculateEMA660(candles: Candlestick[]): LineData[] {
+    const closes = candles.map(c => c.close);
+
+    // Calcular EMA660 usando technicalindicators
+    const ema660Values = EMA.calculate({
+      period: 660,
+      values: closes
+    });
+
+    // Combinar con timestamps (la EMA660 empieza después del período 660)
+    const ema660Data: LineData[] = [];
+
+    for (let i = 0; i < ema660Values.length; i++) {
+      // El índice de la vela correspondiente es i + 660 - 1
+      const candleIndex = i + 660 - 1;
+      if (candleIndex < candles.length) {
+        ema660Data.push({
+          time: (candles[candleIndex].timestamp / 1000) as Time,
+          value: ema660Values[i]
+        });
+      }
+    }
+
+    // console.log('📊 EMA660 calculada:', {
+    //   totalPuntos: ema660Data.length,
+    //   primerPunto: ema660Data[0] ? {
+    //     time: new Date(ema660Data[0].time * 1000),
+    //     value: ema660Data[0].value
+    //   } : 'N/A',
+    //   ultimoPunto: ema660Data[ema660Data.length - 1] ? {
+    //     time: new Date(ema660Data[ema660Data.length - 1].time * 1000),
+    //     value: ema660Data[ema660Data.length - 1].value
+    //   } : 'N/A'
+    // });
+
+    return ema660Data;
+  }
 
   ngOnDestroy(): void {
     if (this.chart) {

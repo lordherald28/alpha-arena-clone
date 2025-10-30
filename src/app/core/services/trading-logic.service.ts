@@ -14,7 +14,9 @@ import { PaperTradingService } from './paper-trading.service';
 })
 export class TradingLogicService {
   //Inject 
-  private paperTradingService = inject(PaperTradingService); // ✅ Nuevo
+  // private marketData = inject(MarketDataService);
+  private paperTrading = inject(PaperTradingService);
+  private glmAi = inject(GlmAiService);
 
   // Signals para el estado reactivo (MANTENER lo que ya funciona)
   public candles = signal<Candlestick[]>([]);
@@ -42,17 +44,89 @@ export class TradingLogicService {
     private glmAiService: GlmAiService
   ) { }
 
-  // ✅ MANTENER métodos existentes que funcionan
+  /**
+   * Iniciar análisis (SOLO análisis, NO ejecución)
+   */
   public startAnalysis(): void {
     if (this.isRunning()) return;
 
     this.isRunning.set(true);
-    console.log('Iniciando análisis de trading...');
+    console.log('🧠 Iniciando análisis de mercado...');
 
     // Ejecutar análisis inmediatamente y luego cada intervalo
-    this.runAnalysisCyclePaper();
-    this.analysisSubscription = interval(5 * 60 * 1000) // Cada 5 minutos
-      .subscribe(() => this.runAnalysisCyclePaper());
+    this.runAnalysisCycle();
+    // ✅ HABILITAR TRADING AUTOMÁTICO AL INICIAR
+    this.enableAutoTrading();
+    this.analysisSubscription = interval(5 * 60 * 1000).subscribe(() => {
+      this.runAnalysisCycle();
+    });
+  }
+
+  // En TradingLogicService  
+  logTradingStatus(): void {
+    console.log('🔍 Estado del trading automático:', {
+      autoTrading: this.paperTrading.getAutoTradingStatus(),
+      isRunning: this.isRunning(),
+      openOrders: this.paperTrading.getPaperOrders().open.length,
+      balance: this.paperTrading.getPaperBalance()
+    });
+  }
+
+  /**
+   * Ciclo de análisis (SOLO análisis)
+   */
+  private runAnalysisCycle(): void {
+    console.log('🔄 Ejecutando ciclo de análisis...', new Date().toLocaleTimeString());
+
+    this.coinexService.getCandles(
+      environment.trading.pair,
+      environment.trading.interval,
+      environment.trading.candleLimit
+    ).subscribe(candles => {
+      this.candles.set(candles);
+      this.lastUpdate.set(new Date());
+
+      // ✅ OBTENER PRECIO ACTUAL CORRECTAMENTE
+      const currentPrice = candles[candles.length - 1].close;
+      console.log(`💰 Precio actual: ${currentPrice}`);
+
+      // 1. Primero verificar y cerrar órdenes existentes
+      this.paperTrading.checkOrders(currentPrice);
+
+      // 2. Análisis de IA
+      this.glmAiService.analyzeMarket(candles).subscribe(aiResponse => {
+        this.aiResponse.set(aiResponse);
+        console.log('🧠 Decisión de IA:', aiResponse);
+
+        // ✅ ENVIAR DECISIÓN CON PRECIO ACTUAL
+        this.paperTrading.processAIDecision(aiResponse, currentPrice);
+      });
+    });
+  }
+
+  /**
+   * Métodos de control del trading automático
+   */
+  enableAutoTrading(): void {
+    this.paperTrading.setAutoTrading(true);
+    console.log('🚀 Trading automático ACTIVADO');
+  }
+
+  disableAutoTrading(): void {
+    this.paperTrading.setAutoTrading(false);
+    console.log('🛑 Trading automático DESACTIVADO');
+  }
+
+  /**
+   * Orden manual (para testing)
+   */
+  placeManualOrder(side: 'BUY' | 'SELL', amount: string = '0.001'): void {
+    const currentPrice = this.candles()[this.candles().length - 1]?.close || 50000;
+    this.paperTrading.placeMarketOrder({
+      market: environment.trading.pair,
+      side: side,
+      amount: amount
+    }).subscribe();
   }
 
   public stopAnalysis(): void {
@@ -66,97 +140,12 @@ export class TradingLogicService {
     console.log('Análisis de trading detenido.');
   }
 
-  private runAnalysisCyclePaper(): void {
-    console.log('🔄 Ejecutando ciclo de análisis...');
-
-    this.coinexService.getCandles(
-      environment.trading.pair,
-      environment.trading.interval,
-      environment.trading.candleLimit
-    ).subscribe(candles => {
-      this.candles.set(candles);
-      this.lastUpdate.set(new Date());
-
-      // ✅ ACTUALIZAR PAPER TRADING con el precio actual
-      const currentPrice = candles[candles.length - 1].close;
-      this.paperTradingService.checkOrders(currentPrice);
-
-      // Análisis de IA
-      this.glmAiService.analyzeMarket(candles).subscribe(aiResponse => {
-        this.aiResponse.set(aiResponse);
-
-        // ✅ EJECUTAR EN PAPER TRADING en lugar de real
-        if (this.shouldExecuteOrder(aiResponse)) {
-          this.executePaperOrder(aiResponse.decision);
-        }
-      });
-    });
-  }
-
-  /**
-    * Ejecutar orden en Paper Trading
-    */
-  private executePaperOrder(decision: 'BUY' | 'SELL' | 'HOLD'): void {
-    const order = {
-      market: environment.trading.pair,
-      side: decision.toLowerCase() as 'BUY' | 'SELL',
-      amount: '0.001' // Cantidad fija para testing
-    };
-
-    console.log(`📝 Ejecutando orden PAPER: ${decision}`, order);
-
-    this.paperTradingService.placeMarketOrder(order).subscribe({
-      next: (result) => {
-        console.log(`✅ Orden PAPER ${decision} ejecutada:`, result);
-        this.tradingStatus.update(status => ({
-          ...status,
-          lastOrder: `PAPER ${decision} ${order.amount} ${order.market}`,
-          totalTrades: status.totalTrades + 1
-        }));
-      },
-      error: (error) => {
-        console.error(`❌ Error en orden PAPER ${decision}:`, error);
-      }
-    });
-  }
-
-  private runAnalysisCycle(): void {
-    console.log('Ejecutando ciclo de análisis...');
-    this.coinexService.getCandles(
-      environment.trading.pair,
-      environment.trading.interval,
-      environment.trading.candleLimit
-    ).subscribe(candles => {
-      this.candles.set(candles);
-      this.lastUpdate.set(new Date());
-
-      this.glmAiService.analyzeMarket(candles).subscribe(response => {
-        this.aiResponse.set(response);
-        console.log('Decisión de IA:', response);
-
-        // ✅ NUEVO: Lógica de ejecución MEJORADA
-        if (this.shouldExecuteOrder(response)) {
-          this.executeOrder(response.decision);
-        }
-      });
-    });
-  }
-
-  // ✅ NUEVO: Método para determinar si ejecutar orden
-  private shouldExecuteOrder(aiResponse: AiResponse): boolean {
-    const minConfidence = 0.75;
-    const isTradingActive = this.tradingStatus().active;
-
-    return isTradingActive &&
-      aiResponse.decision !== 'HOLD' &&
-      aiResponse.confidence >= minConfidence;
-  }
 
   // ✅ NUEVO: Método para ejecutar órdenes (USANDO EL NUEVO SERVICIO)
   private executeOrder(decision: 'BUY' | 'SELL' | 'HOLD'): void {
     const order = {
       market: environment.trading.pair,
-      side: decision.toLowerCase() as 'buy' | 'sell',
+      side: decision.toLowerCase() as 'BUY' | 'SELL',
       amount: environment.coinex.demoAmount || '0.001' // Cantidad pequeña para testing
     };
 
@@ -191,30 +180,7 @@ export class TradingLogicService {
     console.log('🛑 Trading automático DETENIDO');
   }
 
-  // ✅ NUEVO: Método para trading manual
-  public placeManualOrder(side: 'buy' | 'sell', amount: string = '0.001'): void {
-    const order = {
-      market: environment.trading.pair,
-      side: side,
-      amount: amount
-    };
 
-    console.log(`👤 Orden MANUAL ${side}:`, order);
-
-    this.tradingExecution.placeMarketOrder(order).subscribe({
-      next: () => {
-        console.log(`✅ Orden manual ${side} ejecutada`);
-        this.tradingStatus.update(status => ({
-          ...status,
-          lastOrder: `MANUAL ${side} ${amount} ${order.market}`,
-          totalTrades: status.totalTrades + 1
-        }));
-      },
-      error: (error) => {
-        console.error(`❌ Error en orden manual ${side}:`, error);
-      }
-    });
-  }
 
   // ✅ NUEVO: Método para actualizar balance manualmente
   public refreshBalance(): void {

@@ -4,13 +4,14 @@ import { Observable, of } from 'rxjs';
 import { TradingOrder, PaperBalance, PaperTradingConfig, Candlestick } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 import { CoinexService } from './coinex.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PaperTradingService implements ITradingService {
   private balance = signal<PaperBalance>({
-    USDT: 10,  // Balance inicial en USDT
+    USDT: environment.paperTrading.initialBalance,  // Balance inicial en USDT
     BTC: 0,
     totalUSDT: 10
   });
@@ -19,10 +20,14 @@ export class PaperTradingService implements ITradingService {
   private closedOrders = signal<TradingOrder[]>([]);
   private orderHistory = signal<TradingOrder[]>([]);
 
+  // ✅ NUEVO: Signal para control automático
+  private autoTradingEnabled = signal<boolean>(false);
+  private lastAIDecision = signal<{ decision: string, confidence: number } | null>(null);
+
   private config: PaperTradingConfig = {
-    initialBalance: 10,
-    fee: 0.001, // 0.1% de comisión
-    defaultRiskPercent: 0.02 // 2% de riesgo por operación
+    initialBalance: this.balance().USDT,
+    fee: environment.paperTrading.fee, // 0.1% de comisión
+    defaultRiskPercent: environment.paperTrading.defaultRisk // 2% de riesgo por operación
   };
 
   constructor(
@@ -58,7 +63,7 @@ export class PaperTradingService implements ITradingService {
   /**
    * Colocar orden de mercado simulada
    */
-  placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL'; amount: string; }): Observable<any> {
+  placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL' | 'HOLD'; amount: string; }): Observable<any> {
     return new Observable(observer => {
       try {
         const currentPrice = this.getCurrentMarketPrice(); // Necesitarás implementar esto
@@ -107,7 +112,7 @@ export class PaperTradingService implements ITradingService {
   /**
    * Calcular Take Profit y Stop Loss
    */
-  private calculateTPnSL(side: 'BUY' | 'SELL', entryPrice: number): { tp: number, sl: number } {
+  private calculateTPnSL(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number): { tp: number, sl: number } {
     const riskRewardRatio = 2; // 1:2 risk-reward
 
     if (side === 'BUY') {
@@ -294,4 +299,141 @@ export class PaperTradingService implements ITradingService {
     this.closedOrders.set([]);
     console.log('🔄 Paper Trading reiniciado');
   }
+
+  // En PaperTradingService
+  getAutoTradingStatus(): boolean {
+    return this.autoTradingEnabled();
+  }
+
+
+  /**
+    * Habilitar/deshabilitar trading automático
+    */
+  setAutoTrading(enabled: boolean): void {
+    this.autoTradingEnabled.set(enabled);
+    console.log(`🤖 Trading automático: ${enabled ? 'ACTIVADO' : 'DESACTIVADO'}`);
+  }
+
+  /**
+   * Recibir decisión de la IA y ejecutar automáticamente si está habilitado
+   */
+  processAIDecision(aiResponse: { decision: 'BUY' | 'SELL' | 'HOLD', confidence: number, reason: string }, currentPrice: number): void {
+    console.log(`🤖 Procesando decisión de IA:`, {
+      decision: aiResponse.decision,
+      confidence: aiResponse.confidence,
+      autoTradingEnabled: this.autoTradingEnabled(),
+      currentPrice: currentPrice
+    });
+
+    this.lastAIDecision.set(aiResponse);
+
+    // ✅ VERIFICAR Y EJECUTAR ORDEN AUTOMÁTICA
+    if (this.autoTradingEnabled()) {
+      console.log(`🔍 Evaluando condiciones para ${aiResponse.decision}...`);
+
+      if (this.shouldExecuteOrder(aiResponse)) {
+        console.log(`🚀 Ejecutando orden automática: ${aiResponse.decision}`);
+        this.executeAutoOrder(aiResponse.decision, currentPrice);
+      } else {
+        console.log(`⏸️  Orden no ejecutada: condiciones no cumplidas`);
+      }
+    } else {
+      console.log('❌ Trading automático DESHABILITADO - no se ejecuta orden');
+    }
+  }
+
+  /**
+   * Lógica para ejecutar orden automática
+   */
+  private executeAutoOrder(decision: 'BUY' | 'SELL' | 'HOLD', currentPrice: number): void {
+    const orderConfig = this.calculateAutoOrderSize(decision, currentPrice);
+
+    if (orderConfig.amount > 0) {
+      const order: TradingOrder = {
+        id: `auto_${Date.now()}`,
+        market: environment.trading.pair,
+        side: decision,
+        type: 'market',
+        amount: orderConfig.amount,
+        price: currentPrice,
+        timestamp: Date.now(),
+        status: 'filled'
+      };
+
+      // Calcular TP/SL automáticamente
+      const { tp, sl } = this.calculateTPnSL(decision, currentPrice);
+      order.tp = tp;
+      order.sl = sl;
+
+      // Ejecutar la orden
+      this.executeOrder(order);
+
+      console.log(`🤖 ORDEN AUTOMÁTICA ${decision} ejecutada:`, {
+        amount: order.amount,
+        price: order.price,
+        tp: order.tp,
+        sl: order.sl
+      });
+    }
+  }
+
+  /**
+   * Calcular tamaño de orden automática basado en balance y riesgo
+   */
+  private calculateAutoOrderSize(decision: 'BUY' | 'SELL' | 'HOLD', currentPrice: number): { amount: number } {
+    const balance = this.balance();
+    const riskPercent = 0.02; // 2% del balance por operación
+
+    if (decision === 'BUY') {
+      const maxInvestment = balance.USDT * riskPercent;
+      const amount = maxInvestment / currentPrice;
+      return { amount: this.roundAmount(amount) };
+    } else {
+      const maxSale = balance.BTC * riskPercent;
+      return { amount: this.roundAmount(maxSale) };
+    }
+  }
+
+  /**
+   * Redondear cantidad a decimales válidos
+   */
+  private roundAmount(amount: number): number {
+    // Para BTC, normalmente 6 decimales
+    return Math.floor(amount * 1000000) / 1000000;
+  }
+
+  /**
+   * Verificar si se debe ejecutar la orden (lógica de riesgo)
+   */
+  private shouldExecuteOrder(aiResponse: { decision: 'BUY' | 'SELL' | 'HOLD', confidence: number }): boolean {
+    const minConfidence = 0.75;
+
+    // ✅ CORREGIDO: Usar el tipo correcto
+    if (aiResponse.decision === 'HOLD' || aiResponse.confidence < minConfidence) {
+      console.log(`⏸️  No ejecutar: ${aiResponse.decision} con confianza ${aiResponse.confidence}`);
+      return false;
+    }
+
+    // No ejecutar si ya hay muchas órdenes abiertas
+    if (this.openOrders().length >= 3) {
+      console.log('⚠️  Máximo de órdenes abiertas alcanzado');
+      return false;
+    }
+
+    // Verificar balance suficiente
+    const balance = this.balance();
+    if (aiResponse.decision === 'BUY' && balance.USDT < 1) {
+      console.log('⚠️  Balance USDT insuficiente para compra');
+      return false;
+    }
+
+    if (aiResponse.decision === 'SELL' && balance.BTC <= 0) {
+      console.log('⚠️  Balance BTC insuficiente para venta');
+      return false;
+    }
+
+    console.log(`✅ Condiciones cumplidas para ejecutar ${aiResponse.decision}`);
+    return true;
+  }
+
 }

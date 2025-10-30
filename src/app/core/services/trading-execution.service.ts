@@ -144,7 +144,7 @@ export class TradingExecutionService {
    */
   placeMarketOrder(params: {
     market: string;
-    side: 'buy' | 'sell';
+    side: 'BUY' | 'SELL';
     amount: string;
   }): Observable<any> {
     const timestamp = Date.now().toString();
