@@ -1,8 +1,8 @@
 export const environment = {
     production: false,
     coinex: {
-        apiKey: '67B9588D3B744755A1FD7BCA62FE3A41',
-        apiSecret: '4E63C3DAD4494B8AD52FC391F83F74EA2D6597FAE6CDAE58',
+        apiKey: '',
+        apiSecret: '',
         baseUrl: 'https://api.coinex.com/v2',
         demoAmount: '0.001'
     },
@@ -18,7 +18,7 @@ export const environment = {
         defaultRisk: 0.02
     },
     glmAi: {
-        apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',
+        apiKey: '',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
     }
 };
