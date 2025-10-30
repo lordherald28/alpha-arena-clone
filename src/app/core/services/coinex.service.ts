@@ -11,7 +11,7 @@ import { environment as envProd } from '../../environments/environment.prod';
   providedIn: 'root'
 })
 export class CoinexService implements ITradingService {
-  private readonly BASE_URL = environment.production ? envProd.coinex.baseUrl : environment.coinex.baseUrl;
+  private readonly BASE_URL = environment.coinex.baseUrl;
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
@@ -19,7 +19,7 @@ export class CoinexService implements ITradingService {
     '1day', '3day', '1week', '1month'
   ];
 
-  constructor(private http: HttpClient) {  console.log('BASE_URL: ', this.BASE_URL)  }
+  constructor(private http: HttpClient) { console.log('BASE_URL: ', this.BASE_URL) }
 
   getAccountBalance(): Observable<Balance[]> {
     return of([]);
@@ -38,16 +38,18 @@ export class CoinexService implements ITradingService {
       return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
     }
 
-    const url = `${this.BASE_URL}/market/kline`;
-    
+    const url = `${this.BASE_URL}/futures/market`;
+
+
     const params = new HttpParams()
       .set('market', market.toUpperCase())
-      .set('type', interval)
-      .set('limit', limit.toString());
+      .set('limit', limit.toString())
+      .set('period', interval)
+    // .set('period', '');
 
     console.log('🔍 Parámetros enviados:', {
       market: market.toUpperCase(),
-      type: interval,
+      period: interval,
       limit: limit.toString()
     });
 

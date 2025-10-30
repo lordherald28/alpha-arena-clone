@@ -3,8 +3,15 @@ export const environment = {
     coinex: {
         apiKey: '',
         apiSecret: '',
-        baseUrl: 'https://api.coinex.com/v1',
+        baseUrl: 'https://api.coinex.com/v2',
         demoAmount: '0.001'
+    },
+    coinw: {
+        apiKey: 'e7d37c9a-ebb5-4265-bedf-bf6f0344c113',
+        apiSecret: 'FPOHQEM3GHVWKTNR2TBSZ7SOGLYWQ17VW2SW',
+        baseUrl: 'https://api.coinw.com/v1/perpumPublic/klines',
+        granularity: 5,
+        kline_type: 0
     },
     trading: {
         pair: 'BTCUSDT',
@@ -18,7 +25,7 @@ export const environment = {
         defaultRisk: 0.02
     },
     glmAi: {
-        apiKey: '',
+        apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
     }
 };
