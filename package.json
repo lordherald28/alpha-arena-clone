@@ -7,7 +7,8 @@
     "build": "node set-env.js && ng build --configuration production",
     "proxy": "ng serve --proxy-config proxy.conf.json",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "vercel-build": "npm run build"
   },
   "private": true,
   "dependencies": {
@@ -32,6 +33,7 @@
     "@angular/compiler-cli": "^18.2.0",
     "@types/crypto-js": "^4.2.2",
     "@types/jasmine": "~5.1.0",
+    "@types/node": "^18.0.0",
     "angular-cli-ghpages": "^2.0.3",
     "jasmine-core": "~5.2.0",
     "karma": "~6.4.0",

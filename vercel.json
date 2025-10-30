@@ -3,7 +3,7 @@
     "builds": [
         {
             "src": "package.json",
-            "use": "@vercel/angular"
+            "use": "@vercel/static-build"
         }
     ],
     "routes": [
