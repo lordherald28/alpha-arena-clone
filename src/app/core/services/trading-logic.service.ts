@@ -1,30 +1,44 @@
-import { Injectable, signal } from '@angular/core';
+// services/trading-logic.service.ts
+import { Inject, Injectable, signal } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 import { CoinexService } from './coinex.service';
+import { TradingExecutionService } from './trading-execution.service';
 import { GlmAiService } from './glm-ai.service';
-import { Candlestick, AiResponse, Order } from '../models';
+import { Candlestick, AiResponse } from '../models';
 import { environment } from '../../environments/environment';
+import { ITradingService } from '../base/trading-service.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TradingLogicService {
-  // Signals para el estado reactivo
+  // Signals para el estado reactivo (MANTENER lo que ya funciona)
   public candles = signal<Candlestick[]>([]);
   public aiResponse = signal<AiResponse | null>(null);
-  public openOrders = signal<Order[]>([]);
   public isRunning = signal<boolean>(false);
   public lastUpdate = signal<Date | null>(null);
+
+  // ✅ NUEVO: Signal para el estado de trading
+  public tradingStatus = signal<{
+    active: boolean;
+    lastOrder: string | null;
+    totalTrades: number;
+  }>({
+    active: false,
+    lastOrder: null,
+    totalTrades: 0
+  });
 
   private analysisSubscription: Subscription | null = null;
 
   constructor(
-    private coinexService: CoinexService,
+    @Inject('ITradingService')
+    private coinexService: ITradingService,
+    private tradingExecution: TradingExecutionService, // ✅ NUEVO
     private glmAiService: GlmAiService
-  ) {
-    // this.coinexService.getCandlesWithFetch('BTCUSDT', '1min', 5).then(console.log);
-  }
+  ) { }
 
+  // ✅ MANTENER métodos existentes que funcionan
   public startAnalysis(): void {
     if (this.isRunning()) return;
 
@@ -62,27 +76,90 @@ export class TradingLogicService {
         this.aiResponse.set(response);
         console.log('Decisión de IA:', response);
 
-        // Lógica de ejecución (¡CUIDADO! Esto es un ejemplo)
-        if (response.decision !== 'HOLD' && response.confidence > 0.75) {
+        // ✅ NUEVO: Lógica de ejecución MEJORADA
+        if (this.shouldExecuteOrder(response)) {
           this.executeOrder(response.decision);
         }
       });
     });
   }
 
-  private executeOrder(decision: 'BUY' | 'SELL'): void {
+  // ✅ NUEVO: Método para determinar si ejecutar orden
+  private shouldExecuteOrder(aiResponse: AiResponse): boolean {
+    const minConfidence = 0.75;
+    const isTradingActive = this.tradingStatus().active;
+
+    return isTradingActive &&
+      aiResponse.decision !== 'HOLD' &&
+      aiResponse.confidence >= minConfidence;
+  }
+
+  // ✅ NUEVO: Método para ejecutar órdenes (USANDO EL NUEVO SERVICIO)
+  private executeOrder(decision: 'BUY' | 'SELL' | 'HOLD'): void {
     const order = {
       market: environment.trading.pair,
-      type: 'market', // Orden a mercado
-      side: decision.toLowerCase(),
-      amount: '0.001', // Cantidad de BTC a comprar/vender (¡ajustar!)
-      price: '0' // No aplica para órdenes de mercado
+      side: decision.toLowerCase() as 'buy' | 'sell',
+      amount: environment.coinex.demoAmount || '0.001' // Cantidad pequeña para testing
     };
 
-    console.warn(`Ejecutando orden simulada: ${decision}`);
-    // this.coinexService.placeOrder(order).subscribe(result => {
-    //   console.log('Resultado de la orden:', result);
-    //   // Aquí actualizarías el panel de órdenes
-    // });
+    console.log(`🎯 Ejecutando orden ${decision}:`, order);
+
+    this.tradingExecution.placeMarketOrder(order).subscribe({
+      next: () => {
+        console.log(`✅ Orden ${decision} ejecutada exitosamente`);
+        this.tradingStatus.update(status => ({
+          ...status,
+          lastOrder: `${decision} ${order.amount} ${order.market}`,
+          totalTrades: status.totalTrades + 1
+        }));
+      },
+      error: (error) => {
+        console.error(`❌ Error en orden ${decision}:`, error);
+      }
+    });
+  }
+
+  // ✅ NUEVO: Métodos para controlar el trading automático
+  public startTrading(): void {
+    this.tradingStatus.update(status => ({ ...status, active: true }));
+    console.log('🚀 Trading automático ACTIVADO');
+
+    // Cargar balance inicial
+    // this.tradingExecution.getAccountBalance().subscribe();
+  }
+
+  public stopTrading(): void {
+    this.tradingStatus.update(status => ({ ...status, active: false }));
+    console.log('🛑 Trading automático DETENIDO');
+  }
+
+  // ✅ NUEVO: Método para trading manual
+  public placeManualOrder(side: 'buy' | 'sell', amount: string = '0.001'): void {
+    const order = {
+      market: environment.trading.pair,
+      side: side,
+      amount: amount
+    };
+
+    console.log(`👤 Orden MANUAL ${side}:`, order);
+
+    this.tradingExecution.placeMarketOrder(order).subscribe({
+      next: () => {
+        console.log(`✅ Orden manual ${side} ejecutada`);
+        this.tradingStatus.update(status => ({
+          ...status,
+          lastOrder: `MANUAL ${side} ${amount} ${order.market}`,
+          totalTrades: status.totalTrades + 1
+        }));
+      },
+      error: (error) => {
+        console.error(`❌ Error en orden manual ${side}:`, error);
+      }
+    });
+  }
+
+  // ✅ NUEVO: Método para actualizar balance manualmente
+  public refreshBalance(): void {
+    this.tradingExecution.getAccountBalance().subscribe();
   }
 }

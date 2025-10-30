@@ -22,7 +22,7 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
     // Llama este método en tu efecto temporalmente:
     effect(() => {
       const candleData = this.candles();
-      this.debugData(); // ← Agrega esta línea temporalmente
+      // this.debugData(); // ← Agrega esta línea temporalmente
 
       console.log('🕯️ Datos recibidos en componente:', candleData);
 
@@ -36,11 +36,11 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
             low: c.low,
             close: c.close
           };
-          console.log('📈 Vela formateada para chart:', candle);
+          // console.log('📈 Vela formateada para chart:', candle);
           return candle;
         });
 
-        console.log('🎯 Total de velas a mostrar:', formattedData.length);
+        // console.log('🎯 Total de velas a mostrar:', formattedData.length);
         this.candlestickSeries.setData(formattedData);
 
         // ✅ Ajustar el zoom para mostrar todos los datos
@@ -84,7 +84,7 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
   // En tu componente, agrega este método para verificar los datos
   debugData(): void {
     const currentCandles = this.candles();
-    console.log('🐛 DEBUG - Velas actuales:', currentCandles);
+    // console.log('🐛 DEBUG - Velas actuales:', currentCandles);
 
     if (currentCandles && currentCandles.length > 0) {
       console.log('🐛 DEBUG - Primera vela:', currentCandles[0]);

@@ -2,17 +2,19 @@ export const environment = {
     production: false,
     // --- CONFIGURA TUS CLaves AQUÍ ---
     coinex: {
-        apiKey: '67B9588D3B744755A1FD7BCA62FE3A41', // Usa una clave de la cuenta DEMO
+        // Para MODO DEMO - usa cantidades MUY pequeñas
+        apiKey: '67B9588D3B744755A1FD7BCA62FE3A41',
         apiSecret: '4E63C3DAD4494B8AD52FC391F83F74EA2D6597FAE6CDAE58',
-        baseUrl: 'https://api.coinex.com/v2' // O la URL de demo si es diferente
+        baseUrl: 'https://api.coinex.com',
+        demoAmount: '0.001' // Cantidad para testing
+    },
+    trading: {
+        pair: 'BTCUSDT',
+        interval: '5min',
+        candleLimit: 700,
     },
     glmAi: {
         apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
-    },
-    trading: {
-        pair: 'BTCUSDT', // Par de trading por defecto
-        interval: '5min',   // Intervalo de velas (1h, 4h, 1d)
-        candleLimit: 100  // Cantidad de velas para el análisis
     }
 };

@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, throwError } from 'rxjs';
-import { Candlestick } from '../models';
+import { Observable, map, of, throwError } from 'rxjs';
+import { Balance, Candlestick, Order } from '../models';
+import { ITradingService } from '../base/trading-service.interface';
 
 @Injectable({
   providedIn: 'root'
 })
-export class CoinexService {
+export class CoinexService implements ITradingService {
   private readonly BASE_URL = '/api';
 
   // Intervalos válidos según CoinEx
@@ -17,6 +18,20 @@ export class CoinexService {
   ];
 
   constructor(private http: HttpClient) { }
+
+
+
+  getAccountBalance(): Observable<Balance[]> {
+    return of([]);
+  }
+
+  getOpenOrders(market: string): Observable<Order[]> {
+    return of([]);
+  }
+
+  placeMarketOrder(params: { market: string; side: string; amount: string; }): Observable<any> {
+    return of(null);
+  }
 
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
     // Validar que el intervalo sea válido
@@ -38,9 +53,9 @@ export class CoinexService {
       limit: limit.toString()
     });
 
-    return this.http.get<any>(url).pipe(
+    return this.http.get<any>(url, { params }).pipe(
       map(response => {
-        console.log('📨 Respuesta RAW de CoinEx:', response);
+        // console.log('📨 Respuesta RAW de CoinEx:', response);
 
         if (response.code === 0 && response.data) {
           // ✅ MAPEO CORREGIDO - CoinEx devuelve objetos, no arrays
@@ -53,8 +68,8 @@ export class CoinexService {
             volume: parseFloat(item.volume) // Convertir string a number
           }));
 
-          console.log('✅ Velas convertidas correctamente:', candles.length);
-          console.log('📊 Ejemplo de vela:', candles[0]);
+          // console.log('✅ Velas convertidas correctamente:', candles.length);
+          // console.log('📊 Ejemplo de vela:', candles[0]);
           return candles;
         } else {
           throw new Error(`CoinEx Error ${response.code}: ${response.message}`);
