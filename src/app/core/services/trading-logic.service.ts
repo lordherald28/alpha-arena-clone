@@ -1,5 +1,5 @@
 // services/trading-logic.service.ts
-import { Inject, Injectable, signal } from '@angular/core';
+import { inject, Inject, Injectable, signal } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 import { CoinexService } from './coinex.service';
 import { TradingExecutionService } from './trading-execution.service';
@@ -7,11 +7,15 @@ import { GlmAiService } from './glm-ai.service';
 import { Candlestick, AiResponse } from '../models';
 import { environment } from '../../environments/environment';
 import { ITradingService } from '../base/trading-service.interface';
+import { PaperTradingService } from './paper-trading.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TradingLogicService {
+  //Inject 
+  private paperTradingService = inject(PaperTradingService); // ✅ Nuevo
+
   // Signals para el estado reactivo (MANTENER lo que ya funciona)
   public candles = signal<Candlestick[]>([]);
   public aiResponse = signal<AiResponse | null>(null);
@@ -46,9 +50,9 @@ export class TradingLogicService {
     console.log('Iniciando análisis de trading...');
 
     // Ejecutar análisis inmediatamente y luego cada intervalo
-    this.runAnalysisCycle();
+    this.runAnalysisCyclePaper();
     this.analysisSubscription = interval(5 * 60 * 1000) // Cada 5 minutos
-      .subscribe(() => this.runAnalysisCycle());
+      .subscribe(() => this.runAnalysisCyclePaper());
   }
 
   public stopAnalysis(): void {
@@ -60,6 +64,60 @@ export class TradingLogicService {
       this.analysisSubscription = null;
     }
     console.log('Análisis de trading detenido.');
+  }
+
+  private runAnalysisCyclePaper(): void {
+    console.log('🔄 Ejecutando ciclo de análisis...');
+
+    this.coinexService.getCandles(
+      environment.trading.pair,
+      environment.trading.interval,
+      environment.trading.candleLimit
+    ).subscribe(candles => {
+      this.candles.set(candles);
+      this.lastUpdate.set(new Date());
+
+      // ✅ ACTUALIZAR PAPER TRADING con el precio actual
+      const currentPrice = candles[candles.length - 1].close;
+      this.paperTradingService.checkOrders(currentPrice);
+
+      // Análisis de IA
+      this.glmAiService.analyzeMarket(candles).subscribe(aiResponse => {
+        this.aiResponse.set(aiResponse);
+
+        // ✅ EJECUTAR EN PAPER TRADING en lugar de real
+        if (this.shouldExecuteOrder(aiResponse)) {
+          this.executePaperOrder(aiResponse.decision);
+        }
+      });
+    });
+  }
+
+  /**
+    * Ejecutar orden en Paper Trading
+    */
+  private executePaperOrder(decision: 'BUY' | 'SELL' | 'HOLD'): void {
+    const order = {
+      market: environment.trading.pair,
+      side: decision.toLowerCase() as 'buy' | 'sell',
+      amount: '0.001' // Cantidad fija para testing
+    };
+
+    console.log(`📝 Ejecutando orden PAPER: ${decision}`, order);
+
+    this.paperTradingService.placeMarketOrder(order).subscribe({
+      next: (result) => {
+        console.log(`✅ Orden PAPER ${decision} ejecutada:`, result);
+        this.tradingStatus.update(status => ({
+          ...status,
+          lastOrder: `PAPER ${decision} ${order.amount} ${order.market}`,
+          totalTrades: status.totalTrades + 1
+        }));
+      },
+      error: (error) => {
+        console.error(`❌ Error en orden PAPER ${decision}:`, error);
+      }
+    });
   }
 
   private runAnalysisCycle(): void {
