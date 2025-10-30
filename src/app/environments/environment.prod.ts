@@ -4,7 +4,7 @@ export const environment = {
         // ✅ Vercel inyectará estas variables durante el build
         apiKey: process.env['COINEX_API_KEY'] || '',
         apiSecret: process.env['COINEX_API_SECRET'] || '',
-        baseUrl: 'https://api.coinex.com',
+        baseUrl: 'https://api.coinex.com/v2',
         demoAmount: '0.001'
     },
     trading: {

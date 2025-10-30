@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Candlestick, AiResponse } from '../models';
 import { environment } from '../../environments/environment';
+import { environment as envProd } from '../../environments/environment.prod';
+
 import { RSI, MACD, ATR, EMA } from 'technicalindicators';
 import { CoinexService } from './coinex.service';
 
@@ -10,10 +12,10 @@ import { CoinexService } from './coinex.service';
   providedIn: 'root'
 })
 export class GlmAiService {
-  private apiUrl = environment.glmAi.baseUrl;
-  private candles = inject(CoinexService);
+  private apiUrl = environment.production ? envProd.glmAi.baseUrl : environment.glmAi.baseUrl;
+  // private candles = inject(CoinexService);
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) { console.log('apiUrl: ', this.apiUrl) }
 
   analyzeMarket(candles: Candlestick[]): Observable<AiResponse> {
     const prompt = this.buildPrompt(candles);

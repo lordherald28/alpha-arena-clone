@@ -3,13 +3,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of, throwError } from 'rxjs';
 import { Balance, Candlestick, Order } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
+
 import { environment } from '../../environments/environment';
+import { environment as envProd } from '../../environments/environment.prod';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CoinexService implements ITradingService {
-  private readonly BASE_URL = environment.coinex.baseUrl;
+  private readonly BASE_URL = environment.production ? envProd.coinex.baseUrl : environment.coinex.baseUrl;
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
@@ -17,7 +19,7 @@ export class CoinexService implements ITradingService {
     '1day', '3day', '1week', '1month'
   ];
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {  console.log('BASE_URL: ', this.BASE_URL)  }
 
   getAccountBalance(): Observable<Balance[]> {
     return of([]);
