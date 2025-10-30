@@ -13,7 +13,7 @@ export class PaperTradingService implements ITradingService {
   private balance = signal<PaperBalance>({
     USDT: environment.paperTrading.initialBalance,  // Balance inicial en USDT
     BTC: 0,
-    totalUSDT: 10
+    totalUSDT: 500
   });
 
   private openOrders = signal<TradingOrder[]>([]);
