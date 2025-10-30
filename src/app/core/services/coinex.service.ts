@@ -53,7 +53,7 @@ export class CoinexService implements ITradingService {
       limit: limit.toString()
     });
 
-    return this.http.get<any>(url, { params }).pipe(
+    return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } }).pipe(
       map(response => {
         if (response.code === 0 && response.data) {
           const candles = response.data.map((item: any) => ({
