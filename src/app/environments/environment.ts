@@ -3,7 +3,7 @@ export const environment = {
     coinex: {
         apiKey: '67B9588D3B744755A1FD7BCA62FE3A41',
         apiSecret: '4E63C3DAD4494B8AD52FC391F83F74EA2D6597FAE6CDAE58',
-        baseUrl: 'https://api.coinex.com/v1',
+        baseUrl: 'https://api.coinex.com',
         demoAmount: '0.001'
     },
     trading: {
