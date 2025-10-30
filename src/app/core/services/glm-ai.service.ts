@@ -23,7 +23,7 @@ export class GlmAiService {
     const body = {
       model: 'glm-4.6', // o 'glm-4' para más capacidad
       messages: [
-        { role: 'system', content: 'Eres un experto analista de trading cuantitativo. Tu tarea es analizar datos de mercado y proporcionar una única decisión de trading en formato JSON y En ESPAÑOL.' },
+        { role: 'system', content: 'Eres un experto analista de trading cuantitativo. Tu tarea es analizar datos de mercado y proporcionar una única decisión de trading en formato JSON y RESPONDER EN ESPAÑOL.' },
         { role: 'user', content: prompt }
       ]
     };
@@ -175,7 +175,7 @@ export class GlmAiService {
       // Prompt tipo Alpha Arena
       return `
 You are an automated intraday crypto trading analyst.You receive pre - computed indicators.
-Your job is to output ONLY a trading action in strict JSON at the end.
+Your job is to output ONLY a trading action in strict JSON Y EN ESPAÑOL at the end.
 
 MARKET CONTEXT
     symbol: ${environment.trading.pair}
