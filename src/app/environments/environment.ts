@@ -14,7 +14,7 @@ export const environment = {
         kline_type: 0
     },
     trading: {
-        pair: 'EURUSDT',
+        pair: 'BTCUSDT',
         interval: '5min',
         candleLimit: 1000,
     },
