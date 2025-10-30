@@ -3,14 +3,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of, throwError } from 'rxjs';
 import { Balance, Candlestick, Order } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CoinexService implements ITradingService {
-  private readonly BASE_URL = '/api';
+  private readonly BASE_URL = environment.coinex.baseUrl;
 
-  // Intervalos válidos según CoinEx
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
     '1h', '2h', '4h', '6h', '12h',
@@ -18,8 +18,6 @@ export class CoinexService implements ITradingService {
   ];
 
   constructor(private http: HttpClient) { }
-
-
 
   getAccountBalance(): Observable<Balance[]> {
     return of([]);
@@ -34,16 +32,14 @@ export class CoinexService implements ITradingService {
   }
 
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
-    // Validar que el intervalo sea válido
     if (!this.VALID_INTERVALS.includes(interval)) {
       return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
     }
 
-    // const url = `${this.BASE_URL}/spot/kline`;
-    const url = `${this.BASE_URL}/futures/kline?market=${market}&limit=${limit}&period=${interval}`;
-    // Construir parámetros cuidadosamente
+    const url = `${this.BASE_URL}/market/kline`;
+    
     const params = new HttpParams()
-      .set('market', market.toUpperCase()) // Asegurar mayúsculas
+      .set('market', market.toUpperCase())
       .set('type', interval)
       .set('limit', limit.toString());
 
@@ -55,21 +51,15 @@ export class CoinexService implements ITradingService {
 
     return this.http.get<any>(url, { params }).pipe(
       map(response => {
-        // console.log('📨 Respuesta RAW de CoinEx:', response);
-
         if (response.code === 0 && response.data) {
-          // ✅ MAPEO CORREGIDO - CoinEx devuelve objetos, no arrays
           const candles = response.data.map((item: any) => ({
-            timestamp: item.created_at, // Ya está en milisegundos
-            open: parseFloat(item.open), // Convertir string a number
-            high: parseFloat(item.high), // Convertir string a number
-            low: parseFloat(item.low),   // Convertir string a number
-            close: parseFloat(item.close), // Convertir string a number
-            volume: parseFloat(item.volume) // Convertir string a number
+            timestamp: item.created_at,
+            open: parseFloat(item.open),
+            high: parseFloat(item.high),
+            low: parseFloat(item.low),
+            close: parseFloat(item.close),
+            volume: parseFloat(item.volume)
           }));
-
-          // console.log('✅ Velas convertidas correctamente:', candles.length);
-          // console.log('📊 Ejemplo de vela:', candles[0]);
           return candles;
         } else {
           throw new Error(`CoinEx Error ${response.code}: ${response.message}`);
