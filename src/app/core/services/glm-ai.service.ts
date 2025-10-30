@@ -21,7 +21,7 @@ export class GlmAiService {
     const prompt = this.buildPrompt(candles);
 
     const body = {
-      model: 'glm-4-flash', // o 'glm-4' para más capacidad
+      model: 'glm-4.6', // o 'glm-4' para más capacidad
       messages: [
         { role: 'system', content: 'Eres un experto analista de trading cuantitativo. Tu tarea es analizar datos de mercado y proporcionar una única decisión de trading en formato JSON y En ESPAÑOL.' },
         { role: 'user', content: prompt }
