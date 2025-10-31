@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradingLogicService } from '../../core/services/trading-logic.service';
 import { ControlPanelComponent } from './components/control-panel/control-panel.component';
@@ -7,6 +7,7 @@ import { OrdersPanelComponent } from './components/orders-panel/orders-panel.com
 import { AiResponsePanelComponent } from './components/ai-response-panel/ai-response-panel.component';
 import { TradingExecutionService } from '../../core/services/trading-execution.service';
 import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
+import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
 
 @Component({
   selector: 'app-dashboard',
@@ -15,14 +16,17 @@ import { PaperTradingDashboardComponent } from './components/paper-trading-dashb
     CommonModule,
     ControlPanelComponent,
     TradingChartComponent,
-    OrdersPanelComponent,
     AiResponsePanelComponent,
-    PaperTradingDashboardComponent
+    PaperTradingDashboardComponent,
+    OrdenListComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit {
+  reciboDelHijo($event: string) {
+    console.log('Mensaje recibido del hijo:', $event);
+  }
   public candles;
   public aiResponse;
   public isRunning;
@@ -35,6 +39,7 @@ export class DashboardComponent implements OnInit {
     this.lastUpdate = this.tradingLogic.lastUpdate;
   }
 
+  eventoHijo = output<number>();
   // En tu componente
   testCoinExAuth() {
     console.log('🧪 Probando autenticación con CoinEx...');
@@ -59,6 +64,8 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // actualizar el evento que viene del hijo
+    this.eventoHijo.subscribe(console.log)
     // Opcional: cargar datos iniciales al arrancar
   }
 

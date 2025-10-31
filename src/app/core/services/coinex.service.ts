@@ -11,7 +11,7 @@ import { environment as envProd } from '../../environments/environment.prod';
   providedIn: 'root'
 })
 export class CoinexService implements ITradingService {
-  private readonly BASE_URL = '/api';
+  private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',

@@ -4,23 +4,9 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import * as CryptoJS from 'crypto-js';
 import { environment } from '../../environments/environment';
+import { Balance, Order } from '../models';
 
-export interface Balance {
-  currency: string;
-  available: string;
-  frozen: string;
-}
 
-export interface Order {
-  order_id: string;
-  market: string;
-  side: 'buy' | 'sell';
-  type: 'market' | 'limit';
-  amount: string;
-  price: string;
-  status: string;
-  created_at: number;
-}
 
 @Injectable({
   providedIn: 'root'
@@ -32,7 +18,7 @@ export class TradingExecutionService {
   // private readonly SECRET_KEY = environment.coinex.apiSecret;
   private readonly ACCESS_ID = '67B9588D3B744755A1FD7BCA62FE3A41';
   private readonly SECRET_KEY = '4E63C3DAD4494B8AD52FC391F83F74EA2D6597FAE6CDAE58';
-  
+
   // Signals para estado reactivo
   public balance = signal<Balance[]>([]);
   public openOrders = signal<Order[]>([]);
@@ -46,22 +32,22 @@ export class TradingExecutionService {
   //   const signString = method + path + body + timestamp;
   //   return CryptoJS.HmacSHA256(signString, this.SECRET_KEY).toString(CryptoJS.enc.Hex);
   // }
- private createSignature(method: string, path: string, body: string = '', timestamp: string): string {
+  private createSignature(method: string, path: string, body: string = '', timestamp: string): string {
     // ✅ FORMA CORRECTA según documentación de CoinEx
     const signString = method + path + body + timestamp;
-    
+
     console.log('🔐 DEBUG - Cadena para firmar:', {
       method,
-      path, 
+      path,
       body,
       timestamp,
       fullString: signString
     });
-    
+
     const signature = CryptoJS.HmacSHA256(signString, this.SECRET_KEY).toString(CryptoJS.enc.Hex);
-    
+
     console.log('🔐 DEBUG - Firma generada:', signature);
-    
+
     return signature;
   }
 
@@ -125,7 +111,7 @@ export class TradingExecutionService {
         map(response => {
           console.log('📨 Respuesta balance:', response);
           if (response.code === 0) {
-            const balances = response.data.filter(b => parseFloat(b.available) > 0 || parseFloat(b.frozen) > 0);
+            const balances = response.data.filter(b => parseFloat(b.available) > 0 || b.frozen > 0);
             this.balance.set(balances);
             console.log('💰 Balance actualizado:', balances);
             return balances;

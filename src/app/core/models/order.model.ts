@@ -21,7 +21,10 @@ export enum OrderSide {
 export interface Balance {
     currency: string;
     available: string;
-    frozen: string;
+    frozen: number;
+    USDT: number;
+    BTC: number;
+    totalUSDT: number;
 }
 
 export interface Order {
@@ -52,14 +55,25 @@ export interface TradingOrder {
     closeReason?: 'tp' | 'sl' | 'manual';
 }
 
-export interface PaperBalance {
-    USDT: number;
-    BTC: number;
-    totalUSDT: number; // Valor total en USDT
-}
+// export interface PaperBalance {
+//     USDT: number;
+//     BTC: number;
+//     totalUSDT: number; // Valor total en USDT
+// }
 
 export interface PaperTradingConfig {
     initialBalance: number;
     fee: number; // Comisión (ej: 0.001 para 0.1%)
     defaultRiskPercent: number; // % de riesgo por operación
+}
+
+export interface Order {
+    order_id: string;
+    market: string;
+    side: 'buy' | 'sell';
+    type: 'market' | 'limit';
+    amount: string;
+    price: string;
+    status: 'pending' | 'filled' | 'canceled' | 'partial_filled';
+    created_at: number;
 }

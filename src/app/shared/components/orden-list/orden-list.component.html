@@ -1,0 +1,82 @@
+<div class="ordenes-container">
+  <p>Entrada desde el padre: {{entradaDesdePadre()}}</p>
+  <button (click)="onClickEmitirEvento()">Enviar al padre</button>
+  <h3 class="table-title">📊 Órdenes Abiertas</h3>
+
+  <div class="table-responsive">
+    <table class="ordenes-table">
+      <thead>
+        <tr>
+          <th>Market</th>
+          <th>Side</th>
+          <th>Amount</th>
+          <th>Price Entry</th>
+          <th>Current P&L</th>
+          <th>Take Profit</th>
+          <th>Stop Loss</th>
+          <th>Time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- ✅ USAR ordenesConPNL() - señal computada -->
+        @for (orden of ordenesConPNL(); track orden.id) {
+        <tr class="orden-row">
+          <td class="market-cell">{{ orden.market }}</td>
+          <td class="side-cell">
+            <span [class]="'side-badge ' + getSideClass(orden.side)">
+              {{ orden.side }}
+            </span>
+          </td>
+          <td class="amount-cell">{{ formatNumber(orden.amount, 6) }}</td>
+          <td class="price-cell">${{ formatNumber(orden.price, 2) }}</td>
+          <td class="pnl-cell">
+            <!-- ✅ pnlActual ya viene calculado en la señal -->
+            <span [class]="'pnl-badge ' + getPNLClass(orden.pnlActual)">
+              ${{ formatNumber(orden.pnlActual, 2) }}
+            </span>
+          </td>
+          <td class="tp-cell">${{ formatNumber(orden.tp, 2) }}</td>
+          <td class="sl-cell">${{ formatNumber(orden.sl, 2) }}</td>
+          <td class="time-cell">{{ formatTimestamp(orden.timestamp) }}</td>
+          <td class="status-cell">
+            <span [class]="'status-badge ' + orden.status">
+              {{ orden.status }}
+            </span>
+          </td>
+        </tr>
+        } @empty {
+        <tr class="empty-row">
+          <td colspan="9" class="empty-message">
+            🚫 No hay órdenes abiertas
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ✅ USAR summary() - señal computada -->
+  @if (ordenesConPNL().length > 0) {
+  <div class="summary">
+    <div class="summary-item">
+      <span class="label">Total Órdenes:</span>
+      <span class="value">{{ summary().total }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Compras:</span>
+      <span class="value buy">{{ summary().compras }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Ventas:</span>
+      <span class="value sell">{{ summary().ventas }}</span>
+    </div>
+    @if (currentPrice() > 0) {
+    <div class="summary-item">
+      <span class="label">Precio Actual:</span>
+      <span class="value">${{ formatNumber(currentPrice(), 2) }}</span>
+    </div>
+    }
+  </div>
+  }
+</div>
