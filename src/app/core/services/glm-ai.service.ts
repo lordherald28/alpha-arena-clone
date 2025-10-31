@@ -62,14 +62,13 @@ export class GlmAiService {
       return "No hay suficientes velas para realizar un análisis. Proporciona al menos 50 velas.";
     }
 
-    // this.debugRSI();
     const closes = candles.map(c => c.close);
     const highs = candles.map(c => c.high);
     const lows = candles.map(c => c.low);
 
     try {
       // ✅ CÁLCULOS CORREGIDOS con manejo de errores
-      const rsi = RSI.calculate({ period: 14, values: closes });
+      const rsi = RSI.calculate({ period: 7, values: closes });
       const ema660 = EMA.calculate({ period: 660, values: closes });
 
       // ✅ ATR CORREGIDO - Verifica el formato específico
@@ -100,6 +99,7 @@ export class GlmAiService {
       const lastVolume = lastCandle.volume;
 
       // Últimos valores de indicadores
+      const previousRsi = rsi.length >= 2 ? rsi[rsi.length - 2] : null; // RSI anterior y con validacion para prevenir errores.
       const lastRsi = rsi[rsi.length - 1];
       const lastEma660 = ema660[ema660.length - 1];
       const lastAtr14 = atr14[atr14.length - 1];
@@ -164,67 +164,96 @@ export class GlmAiService {
 
       // Prompt tipo Alpha Arena
       return `
-You are an automated intraday crypto trading analyst.You receive pre - computed indicators.
-Your job is to output ONLY a trading action in strict JSON Y EN ESPAÑOL at the end.
+            ACTÚA COMO UN ANALISTA DE TRADING DE CRYPTO INTRADIARIO AUTOMATIZADO PROFESIONAL
 
-MARKET CONTEXT
-    symbol: ${environment.trading.pair}
-    timeframe: ${environment.trading.interval}
-    last_close_price: ${lastClose}
-    last_volume: ${lastVolume}
+**CONTEXTO Y ROL:**
+Eres un sistema de IA especializado en trading algorítmico de criptomonedas con enfoque en 7 pares principales. Tu función es analizar indicadores técnicos pre-calculados y generar señales de trading automatizadas.
 
-    INDICATORS(most recent value)
-    ema660: ${lastEma660}
-    atr14: ${lastAtr14}
-    rsi14: ${lastRsi}
-    macd_line: ${lastMacd?.MACD}
-    macd_signal: ${lastMacd?.signal}
-    macd_histogram: ${lastMacd?.histogram}
-    macd_cross_state: ${macdCross}  // bullish means MACD above signal
+**DATOS DE ENTRADA:**
+- Símbolo: ${environment.trading.pair}
+- Timeframe: ${environment.trading.interval}
+- Precio de cierre: ${lastClose}
+- Volumen: ${lastVolume}
 
-DERIVED STATE FLAGS
-    price_below_ema660: ${isBelowEma660}
-    rsi_overbought_gt70: ${isRsiOverbought}
-    rsi_oversold_lt30: ${isRsiOversold}
+**INDICADORES TÉCNICOS PRINCIPALES:**
+- EMA 660: ${lastEma660} (tendencia dominante)
+- RSI 7: ${lastRsi} (momentum a corto plazo)
+- RSI 7 ANTERIOR: ${previousRsi} (para detectar primer toque)
+- ATR 14: ${lastAtr14} (volatilidad y gestión de riesgo)
+- MACD: ${lastMacd?.MACD} | Señal: ${lastMacd?.signal} | Histograma: ${lastMacd?.histogram}
 
-ENTRY SETUP EVALUATION
-    1. Short candidate logic:
-    - Condition A: price_below_ema660 === true
-      - Condition B: rsi_overbought_gt70 === true
-    Interpretation: If BOTH A and B are true, market may be in a rejection after an overextended move. 
-   This is a potential SELL setup.
-   High atr14 means high volatility and higher risk.Low atr14 means tighter ranges and possible fakeouts.
-   Evaluate if SELL is still reasonable now.
+**ESTADOS DERIVADOS CRÍTICOS:**
+- Precio vs EMA660: ${isBelowEma660 ? "ABAJO" : "ARRIBA"}
+- Cruce MACD: ${macdCross}
 
-2. Long candidate logic:
-    - Mirror idea: If price is above ema660 AND RSI is not overbought(rsi14 < 70) AND MACD cross is bullish,
-      that suggests continuation to the upside.That is a potential BUY setup.
+**DETECCIÓN DE PRIMER TOQUE RSI (CRÍTICO):**
+- PRIMER TOQUE SOBRECOMPRA: RSI actual >= 70 Y RSI anterior < 70
+- PRIMER TOQUE SOBREVENTA: RSI actual <= 30 Y RSI anterior > 30
+- NO ES PRIMER TOQUE: Si RSI ya estaba en zona (≥70 o ≤30)
 
-3. HOLD logic:
-    - If neither setup is clean or atr14 implies chaotic conditions that make risk / reward unclear,
-      prefer HOLD.
+**ESTRATEGIA DE DECISIÓN - REGLAS ESTRICTAS:**
 
-RISK CONTEXT
-atr14 represents the typical recent movement size(volatility). 
-If atr14 is extremely large relative to price, the move is chaotic.
-In chaos, HOLD is usually safer than chasing.
+**SEÑAL DE SELL (Corto) - REQUISITOS:**
+1. TENDENCIA: Precio por DEBAJO de EMA660 (${isBelowEma660})
+2. MOMENTUM: PRIMER TOQUE RSI >=70 (${lastRsi} >=70 y ${previousRsi} <70)
+3. CONFIRMACIÓN: MACD en cruce bajista o histograma negativo
+4. VOLATILIDAD: ATR14 indica condiciones operables
 
-      TASK
-Using ONLY the data provided above:
-    - Decide the best action NOW: "BUY", "SELL", or "HOLD".
-- Give a confidence score between 0 and 1(example: 0.74).
-- Give a short reason mentioning the relevant signals(ema660, rsi14, macd_cross_state, atr14, etc).
-- Prefer SELL if the short candidate logic is clearly met.
-- Prefer BUY if the long candidate logic is clearly met.
-- Otherwise HOLD.
+**SEÑAL DE BUY (Largo) - REQUISITOS:**
+1. TENDENCIA: Precio por ENCIMA de EMA660 (${!isBelowEma660})
+2. MOMENTUM: PRIMER TOQUE RSI <=30 (${lastRsi} <=30 y ${previousRsi} >30)
+3. CONFIRMACIÓN: MACD en cruce alcista o histograma positivo
+4. VOLATILIDAD: ATR14 dentro de rangos normales
 
-OUTPUT FORMAT
-Respond ONLY with valid JSON.No markdown fences.No commentary.No explanation before or after.
+**GESTIÓN DE RIESGO EN CRYPTO:**
+- RIESGO POR OPERACIÓN: 2% del capital
+- STOP LOSS: 1.5 x ATR14 desde entrada
+- TAKE PROFIT: 2.25 x ATR14 desde entrada
+- MÁXIMO: 3 operaciones simultáneas
+
+**EVALUACIÓN DE VOLATILIDAD (ATR14):**
+- ATR ALTO (>2% del precio): Reducir tamaño de posición al 1%
+- ATR MUY ALTO (>4% del precio): EVITAR operar (HOLD)
+- ATR BAJO (<0.5% del precio): Posibles falsos rompimientos
+
+**PRIORIDADES DE DECISIÓN:**
+1. SEGURIDAD: Solo operar con confirmación múltiple de indicadores
+2. CALIDAD: EXCLUSIVAMENTE señales de PRIMER TOQUE RSI
+3. VOLATILIDAD: ATR14 en rangos operables
+4. TENDENCIA: Respetar dirección de EMA660
+
+**VALIDACIONES OBLIGATORIAS:**
+✅ CONFIRMACIÓN DE TENDENCIA (Precio vs EMA660)
+✅ PRIMER TOQUE RSI (cruce limpio 70/30) 
+✅ CONFIRMACIÓN MACD (cruce en dirección de la señal)
+✅ VOLATILIDAD ADECUADA (ATR14 no extremo)
+
+**JERARQUÍA DE DECISIÓN:**
+1. Si TODAS las condiciones de SELL se cumplen → "SELL"
+2. Si TODAS las condiciones de BUY se cumplen → "BUY"  
+3. Si falta 1 condición → "HOLD" + monitorear
+4. Si no es PRIMER TOQUE RSI → DESCARTAR automáticamente
+5. Si volatilidad extrema (ATR >4%) → "HOLD" automático
+
+**SALIDA EN FORMATO JSON ESTRICTO (SOLO ESPAÑOL):**
 {
-      "decision": "BUY" | "SELL" | "HOLD",
-        "confidence": 0.85,
-          "reason": "Brief justification. Reference the indicators that matter."
-    }
+  "decision": "BUY" | "SELL" | "HOLD",
+  "confidence": 0.85,
+  "reason": "Breve justificación técnica mencionando primer toque RSI",
+  "risk_parameters": {
+    "stop_loss_percent": 1.5,
+    "take_profit_percent": 2.25,
+    "position_size": 0.02
+  }
+}
+
+**ESCENARIOS DE EJEMPLO VÁLIDOS:**
+- "BUY": Precio > EMA660 + RSI (29.5 vs anterior 31.2) + MACD alcista
+- "SELL": Precio < EMA660 + RSI (70.3 vs anterior 69.8) + MACD bajista
+- "HOLD": RSI (71.5 vs anterior 71.0) → NO es primer toque
+
+**OBJETIVO:**
+Maximizar probabilidad de éxito mediante disciplina estricta en la detección de primer toque RSI, usando múltiples confirmaciones técnicas y gestión de riesgo adaptada a la volatilidad crypto.
     `;
     } catch (error: any) {
       console.error('❌ Error en cálculos técnicos:', error);
