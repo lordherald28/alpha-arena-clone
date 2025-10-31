@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Candlestick, AiResponse } from '../models';
@@ -6,7 +6,6 @@ import { environment } from '../../environments/environment';
 import { environment as envProd } from '../../environments/environment.prod';
 
 import { RSI, MACD, ATR, EMA } from 'technicalindicators';
-import { CoinexService } from './coinex.service';
 
 @Injectable({
   providedIn: 'root'
@@ -57,16 +56,6 @@ export class GlmAiService {
       })
     );
   }
-
-  // Pega esto en la consola con los datos reales
-  // debugRSI() {
-  //   const lastRsi = 34.82; // Tu valor real
-  //   console.log('🔍 ANALISIS RSI MANUAL:');
-  //   console.log('RSI:', lastRsi);
-  //   console.log('¿Overbought?', lastRsi > 70); // Debe ser FALSE
-  //   console.log('¿Oversold?', lastRsi < 30);   // Debe ser TRUE
-  //   console.log('¿Zona neutral?', lastRsi >= 30 && lastRsi <= 70); // Debe ser FALSE
-  // }
 
   private buildPrompt(candles: Candlestick[]): string {
     if (candles.length < 50) {
@@ -242,81 +231,4 @@ Respond ONLY with valid JSON.No markdown fences.No commentary.No explanation bef
     }
 
   }
-
-
-
-  //   private async buildPrompt(candles: Candlestick[]) {
-  //     if (candles.length < 50) {
-  //       return "No hay suficientes velas para realizar un análisis. Proporciona al menos 50 velas.";
-  //     }
-
-  //     const closes = candles.map(c => c.close);
-  //     const highs = candles.map(c => c.high);
-  //     const lows = candles.map(c => c.low);
-
-  //     // --- Cálculo de Indicadores ---
-  //     // const sma20 = SMA.calculate({ period: 20, values: closes });
-  //     // const sma50 = SMA.calculate({ period: 50, values: closes });
-  //     const rsi = RSI.calculate({ period: 14, values: closes });
-  //     const ema660 = EMA.calculate({ period: 660, values: closes });
-  //     // const ema200 = EMA.calculate({ period: 200, values: closes });
-  //     // const ema50 = EMA.calculate({ period: 50, values: closes });
-  //     const atr14 = ATR.calculate({
-  //       period: 14,
-  //       close: candles.map(c => c.close as number),
-  //       low: candles.map(l => l.low as number),
-  //       high: candles.map(h => h.high as number)
-  //     });
-
-  //     const macd = MACD.calculate({
-  //       values: closes,
-  //       fastPeriod: 12,
-  //       slowPeriod: 26,
-  //       signalPeriod: 9,
-  //       SimpleMAOscillator: false,
-  //       SimpleMASignal: false,
-  //     });
-
-  //     const lastCandle = candles[candles.length - 1];
-  //     const lastEma660 = ema660[ema660.length - 1];
-  //     const lastArt14 = atr14[atr14.length - 1];
-  //     // const lastSma20 = sma20[sma20.length - 1];
-  //     // const lastSma50 = sma50[sma50.length - 1];
-  //     const lastRsi = rsi[rsi.length - 1];
-  //     const lastMacd = macd[macd.length - 1];
-
-  //     // --- El Prompt "Estilo Alpha Arena" ---
-  //     return `
-  // Analiza el siguiente escenario de mercado para el par ${environment.trading.pair} en el timeframe ${environment.trading.interval}.
-
-  // **Datos Actuales:**
-  // - Precio de Cierre (Última Vela): ${lastCandle.close}
-  // - Volumen (Última Vela): ${lastCandle.volume}
-
-  // **Indicadores Técnicos Clave:**
-  // - EMA 660: ${lastEma660}
-  // - ATR (14): ${lastArt14}
-  // - RSI (14): ${lastRsi}
-  // - MACD: ${lastMacd.MACD}, Señal: ${lastMacd.signal}, Histograma: ${lastMacd.histogram}
-
-  // **Contexto del Mercado:**
-  // - El precio actual está ${lastCandle.close > lastEma660 ? 'por encima' : 'por debajo'} de la SMA 20.
-  // - El precio actual está ${lastCandle.close > lastEma660 ? 'por encima' : 'por debajo'} de la SMA 50.
-  // - El RSI se encuentra en la zona de ${lastRsi > 70 ? 'sobrecompra' : lastRsi < 30 ? 'sobreventa' : 'neutral'}.
-  // - El cruce del MACD es ${lastMacd?.MACD != null && lastMacd?.signal != null && lastMacd.MACD > lastMacd.signal ? 'alcista (MACD por encima de la señal)' : 'bajista (MACD por debajo de la señal)'}.
-
-  // **Tarea:**
-  // Basado en toda la información proporcionada, determina la acción de trading más prudente.
-
-  // **Instrucciones de Salida:**
-  // Responde ÚNICAMENTE con un objeto JSON. No incluyas ningún texto adicional antes o después. El JSON debe tener la siguiente estructura:
-  // \`\`\`json
-  // {
-  //   "decision": "BUY" | "SELL" | "HOLD",
-  //   "confidence": 0.85,
-  //   "reason": "Proporciona una breve y clara justificación de tu decisión, mencionando los indicadores clave que la respaldan."
-  // }
-  // \`\`\`
-  // `;
-  //   }
 }
