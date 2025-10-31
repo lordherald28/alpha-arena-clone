@@ -1,9 +1,13 @@
 <!-- ESTE ES EL CÓDIGO CORRECTO PARA EL CONTROL REMOTO -->
 <div class="control-panel">
-  <button (click)="start.emit()" [disabled]="isRunning()" class="btn btn-start">
-    Iniciar Análisis
-  </button>
-  <button (click)="stop.emit()" [disabled]="isRunning()" class="btn btn-stop">
-    Detener
-  </button>
+  <app-panel-market-symbol (pairChange)="onPairChange($event)" (timeframeChange)="onTimeframeChange($event)"
+    (limitChange)="onLimitChange($event)"></app-panel-market-symbol>
+  <div class="">
+    <button (click)="onStart()" [disabled]="isRunning()" class="btn btn-start">
+      Iniciar Análisis
+    </button>
+    <button (click)="stop.emit()" [disabled]="isRunning()" class="btn btn-stop">
+      Detener
+    </button>
+  </div>
 </div>

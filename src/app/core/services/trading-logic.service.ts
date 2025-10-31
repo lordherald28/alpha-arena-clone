@@ -4,7 +4,7 @@ import { interval, Subscription } from 'rxjs';
 import { CoinexService } from './coinex.service';
 import { TradingExecutionService } from './trading-execution.service';
 import { GlmAiService } from './glm-ai.service';
-import { Candlestick, AiResponse } from '../models';
+import { Candlestick, AiResponse, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { ITradingService } from '../base/trading-service.interface';
 import { PaperTradingService } from './paper-trading.service';
@@ -47,14 +47,14 @@ export class TradingLogicService {
   /**
    * Iniciar análisis (SOLO análisis, NO ejecución)
    */
-  public startAnalysis(): void {
+  public startAnalysis(market?: TypeMarket): void {
     if (this.isRunning()) return;
 
     this.isRunning.set(true);
     console.log('🧠 Iniciando análisis de mercado...');
 
     // Ejecutar análisis inmediatamente y luego cada intervalo
-    this.runAnalysisCycle();
+    this.runAnalysisCycle(market);
     // ✅ HABILITAR TRADING AUTOMÁTICO AL INICIAR
     this.enableAutoTrading();
     this.analysisSubscription = interval(5 * 60 * 1000).subscribe(() => {
@@ -75,13 +75,13 @@ export class TradingLogicService {
   /**
    * Ciclo de análisis (SOLO análisis)
    */
-  private runAnalysisCycle(): void {
-    console.log('🔄 Ejecutando ciclo de análisis...', new Date().toLocaleTimeString());
+  private runAnalysisCycle(market?: TypeMarket): void {
+    // console.log('🔄 Ejecutando ciclo de análisis...', new Date().toLocaleTimeString());
 
     this.coinexService.getCandles(
-      environment.trading.pair,
-      environment.trading.interval,
-      environment.trading.candleLimit
+      market?.market ?? environment.trading.pair,
+      market?.interval ?? environment.trading.interval,
+      market?.limit ?? environment.trading.candleLimit
     ).subscribe(candles => {
       this.candles.set(candles);
       this.lastUpdate.set(new Date());
@@ -96,7 +96,7 @@ export class TradingLogicService {
       // 2. Análisis de IA
       this.glmAiService.analyzeMarket(candles).subscribe(aiResponse => {
         this.aiResponse.set(aiResponse);
-        console.log('🧠 Decisión de IA:', aiResponse);
+        // console.log('🧠 Decisión de IA:', aiResponse);
 
         // ✅ ENVIAR DECISIÓN CON PRECIO ACTUAL
         this.paperTrading.processAIDecision(aiResponse, currentPrice);

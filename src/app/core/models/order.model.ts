@@ -17,6 +17,11 @@ export enum OrderSide {
 //     status: string; // 'filled', 'partial_filled', 'pending', 'cancelled'
 //     createdAt: Date;
 // }
+export interface TypeMarket {
+    market: string;
+    interval: string;
+    limit: number;
+}
 
 export interface Balance {
     currency: string;

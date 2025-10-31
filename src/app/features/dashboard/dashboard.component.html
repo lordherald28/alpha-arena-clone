@@ -10,17 +10,18 @@
   </header>
 
   <div class="control-section">
-    <app-control-panel (start)="startAnalysis()" (stop)="stopAnalysis()"></app-control-panel>
+    <app-control-panel (start)="startAnalysis($event)" (stop)="stopAnalysis()"></app-control-panel>
   </div>
 
   <div class="main-content">
     <section class="chart-section">
       <app-trading-chart [candles]="candles()"></app-trading-chart>
     </section>
-    
+
     <aside class="side-panels">
       <app-paper-trading-dashboard></app-paper-trading-dashboard>
-      <app-orden-list [currentPrice]="1800" [entradaDesdePadre]="25" (emitirMensaje)="reciboDelHijo($event)"></app-orden-list>
+      <app-orden-list [currentPrice]="1800" [entradaDesdePadre]="25"
+        (emitirMensaje)="reciboDelHijo($event)"></app-orden-list>
       <app-ai-response-panel [aiResponse]="aiResponse()"></app-ai-response-panel>
     </aside>
   </div>

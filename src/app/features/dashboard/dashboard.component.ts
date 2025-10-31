@@ -8,6 +8,7 @@ import { AiResponsePanelComponent } from './components/ai-response-panel/ai-resp
 import { TradingExecutionService } from '../../core/services/trading-execution.service';
 import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
 import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
+import { TypeMarket } from '../../core/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -69,8 +70,8 @@ export class DashboardComponent implements OnInit {
     // Opcional: cargar datos iniciales al arrancar
   }
 
-  public startAnalysis(): void {
-    this.tradingLogic.startAnalysis();
+  public startAnalysis(market: TypeMarket): void {
+    this.tradingLogic.startAnalysis(market);
   }
 
   public stopAnalysis(): void {

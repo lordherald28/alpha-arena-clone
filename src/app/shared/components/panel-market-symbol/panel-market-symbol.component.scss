@@ -1,0 +1,78 @@
+// _trading-controls.component.scss
+
+// Variables de color para fácil personalización
+$primary-color: #3f51b5;
+$primary-hover-color: #303f9f;
+$text-color: #333;
+$background-color: #f4f7f6;
+$border-color: #ccc;
+$border-radius: 8px;
+$font-family: 'Roboto', sans-serif;
+
+.trading-controls-container {
+    display: flex;
+    flex-wrap: wrap; // Permite que los controles se ajusten en pantallas pequeñas
+    gap: 16px; // Espacio entre los grupos de controles
+    padding: 7px;
+    background-color: $background-color;
+    border-radius: $border-radius;
+    font-family: $font-family;
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 150px; // Ancho mínimo para cada control
+
+        label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: $text-color;
+            font-size: 0.9em;
+        }
+
+        select {
+            padding: 10px 12px;
+            border: 1px solid $border-color;
+            border-radius: $border-radius;
+            background-color: #fff;
+            font-size: 1em;
+            color: $text-color;
+            cursor: pointer;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+            // Quita la flecha por defecto en algunos navegadores para un estilo más limpio
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+
+            // Añade una flecha personalizada
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 1em;
+            padding-right: 2.5em; // Espacio para la flecha
+
+            &:focus {
+                outline: none;
+                border-color: $primary-color;
+                box-shadow: 0 0 0 2px rgba($primary-color, 0.2);
+            }
+
+            &:hover {
+                border-color: darken($border-color, 10%);
+            }
+        }
+    }
+}
+
+// Media query para responsividad en pantallas más pequeñas
+@media (max-width: 600px) {
+    .trading-controls-container {
+        flex-direction: column;
+        gap: 12px;
+
+        .control-group {
+            min-width: 100%;
+        }
+    }
+}

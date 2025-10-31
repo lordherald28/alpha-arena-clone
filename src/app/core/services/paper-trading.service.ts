@@ -1,6 +1,6 @@
 // services/paper-trading.service.ts
 import { effect, inject, Injectable, OnDestroy, OnInit, Signal, signal } from '@angular/core';
-import { catchError, interval, Observable, of, Subscription, switchMap } from 'rxjs';
+import { catchError, interval, Observable, of, Subscription, switchMap, tap } from 'rxjs';
 import { TradingOrder, PaperTradingConfig, Candlestick, Balance, AiResponse } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 import { CoinexService } from './coinex.service';
@@ -9,6 +9,7 @@ import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eRiskRewards, eSTATUS, 
 import { GlmAiService } from './glm-ai.service';
 
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ATR } from 'technicalindicators';
 
 @Injectable({
   providedIn: 'root'
@@ -31,7 +32,6 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private autoTradingEnabled = signal<boolean>(false);
   private lastAIDecision = signal<{ decision: string, confidence: number } | null>(null);
 
-  private glmService = inject(GlmAiService);
   private marketData = signal<{ market: string, interval: string, limit: number }>({
     market: environment.trading.pair,
     interval: environment.trading.interval,
@@ -40,6 +40,9 @@ export class PaperTradingService implements ITradingService, OnDestroy {
 
   private $subs = new Subscription();
 
+  private $candles = signal<Candlestick[]>([]);
+  private $currentAtr = signal<number>(0);
+
   private config: PaperTradingConfig = {
     initialBalance: +this.balance().USDT,
     fee: environment.paperTrading.fee,
@@ -47,11 +50,12 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   };
 
   constructor(
-    private readonly serviceCoinex: CoinexService
+    private readonly serviceCoinex: CoinexService,
   ) {
     console.log('📊 Paper Trading iniciado con balance:', this.balance());
     console.log(`📞 Obteniendo el ultimo precio del symbol: ${this.marketData().market}`);
     this.setupAutoOrderMonitoring();
+    this.startPriceMonitoring();
   }
   readonly currentPriceMarketSymbol = signal<number>(0);
 
@@ -59,6 +63,19 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     this.$subs.unsubscribe();
   }
 
+  calcIndicators(): void {
+    const candles = this.$candles();
+    const closes = candles.map(c => c.close);
+    const highs = candles.map(c => c.high);
+    const lows = candles.map(c => c.low);
+    const atr14 = ATR.calculate({
+      high: highs,
+      low: lows,
+      close: closes,
+      period: 14
+    });
+    this.$currentAtr.set(atr14[atr14.length - 1]);
+  }
 
   private setupAutoOrderMonitoring(): void {
     effect(() => {
@@ -83,6 +100,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private startPriceMonitoring(): void {
     this.$subs = interval(30000).pipe( // Cada 30 segundos
       switchMap(() => this.getCandles(this.marketData().market, this.marketData().interval, this.marketData().limit)),
+      tap(response => this.$candles.set(response)),
       catchError(err => {
         console.error('Price monitoring error:', err);
         return of(null);
@@ -98,6 +116,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     const candles = this.serviceCoinex.getCandles(market, interval, limit);
     //Actualiza los datos del market data
     this.marketData.set({ market, interval, limit });
+    // this.$candles.set(toSignal(candles as Candlestick[], { initialValue: [] }))
     return candles;
   }
 
@@ -143,7 +162,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
         };
 
         // ✅ ACTUALIZADO: Usar ATR para TP/SL (si está disponible)
-        const atr = this.getCurrentATR(); // Necesitarás implementar esto
+        const atr = this.$currentAtr(); // Necesitarás implementar esto
         const { tp, sl } = atr ?
           this.calculateTPnSLByATR(params.side, currentPrice, atr) :
           this.calculateTPnSLByPercent(params.side, currentPrice);
@@ -353,7 +372,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private getCurrentATR(): number | 0 {
     // TODO: Implementar obtención de ATR actual
     // Por ahora retornar null para usar fallback
-    return this.glmService.currentAtr();
+    // return this.glmService.currentAtr();
+    return 0
   }
 
   /**

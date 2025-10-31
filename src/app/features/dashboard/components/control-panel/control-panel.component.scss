@@ -1,0 +1,11 @@
+.control-panel {
+    width: 100%;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 7px;
+    background-color: inherit;
+    border-radius: inherit;
+    justify-content: space-around;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

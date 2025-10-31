@@ -1,0 +1,42 @@
+<div class="trading-controls-container">
+  <button (click)="oncAcceptConfMarket()">Guardar</button>
+  <!-- Selector de Pares de Criptomonedas -->
+  <div class="control-group">
+    <label for="crypto-pair-select">Par:</label>
+    <select id="crypto-pair-select" [formControl]="pairControl">
+      <option value="" selected>Seleccionar par</option>
+      @for (item of cryptoPairs(); track item) {
+      <!-- ✅ CORREGIDO: Usar la variable item, no el string 'item' -->
+      <option [value]="item">{{ item }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Selector de Temporalidades -->
+  <div class="control-group">
+    <label for="timeframe-select">Temporalidad:</label>
+    <select id="timeframe-select" [formControl]="timeframeControl">
+      <option value="" disabled selected>Seleccionar temporalidad</option>
+      @for (timeframe of timeframes(); track timeframe) {
+      <option [value]="timeframe.value">
+        {{ timeframe.label }}
+      </option>
+      }
+    </select>
+  </div>
+
+  <!-- Selector de Límite de Velas -->
+  <div class="control-group">
+    <label for="limit-select">Límite de Velas:</label>
+    <select id="limit-select" [formControl]="limitControl">
+      <option value="" disabled selected>Seleccionar límite</option>
+      @for (limit of candleLimits(); track limit) {
+      <option [value]="limit">
+        {{ limit }}
+      </option>
+      }
+
+    </select>
+  </div>
+
+</div>
