@@ -13,7 +13,7 @@ export class PaperTradingService implements ITradingService {
   private balance = signal<PaperBalance>({
     USDT: environment.paperTrading.initialBalance,  // Balance inicial en USDT
     BTC: 0,
-    totalUSDT: 500
+    totalUSDT: environment.paperTrading.initialBalance
   });
 
   private openOrders = signal<TradingOrder[]>([]);
@@ -32,7 +32,6 @@ export class PaperTradingService implements ITradingService {
 
   constructor(
     private readonly serviceCoinex: CoinexService
-
   ) {
     console.log('📊 Paper Trading iniciado con balance:', this.balance());
   }
@@ -66,7 +65,7 @@ export class PaperTradingService implements ITradingService {
   placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL' | 'HOLD'; amount: string; }): Observable<any> {
     return new Observable(observer => {
       try {
-        const currentPrice = this.getCurrentMarketPrice(); // Necesitarás implementar esto
+        const currentPrice = this.getCurrentMarketPrice();
         const amount = parseFloat(params.amount);
 
         const order: TradingOrder = {
@@ -127,7 +126,7 @@ export class PaperTradingService implements ITradingService {
   }
 
   /**
-   * Ejecutar orden y actualizar balance
+   * Ejecutar orden y actualizar balance - CORREGIDO
    */
   private executeOrder(order: TradingOrder): void {
     const fee = order.amount * order.price * this.config.fee;
@@ -145,16 +144,16 @@ export class PaperTradingService implements ITradingService {
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ COMPRA ejecutada: ${order.amount} USDT @ $${order.price}`);
+        console.log(`✅ COMPRA ejecutada: ${order.amount} BTC @ $${order.price} por ${cost} USDT`);
       } else {
-        throw new Error('Saldo insuficiente en paper trading');
+        throw new Error(`Saldo insuficiente en paper trading: ${this.balance().USDT} USDT < ${cost} USDT`);
       }
 
-    } else {
-      // VENTA: Gastar BTC, recibir USDT
+    } else if (order.side === 'SELL') {
+      // VENTA: Gastar BTC, recibir USDT - CORREGIDO
       const revenue = order.amount * order.price - fee;
 
-      if (this.balance().BTC >= order.amount) {
+      if (this.balance().BTC >= order.amount) { // ✅ CORREGIDO: Verificar balance de BTC, no USDT
         this.balance.update(bal => ({
           ...bal,
           USDT: bal.USDT + revenue,
@@ -163,11 +162,12 @@ export class PaperTradingService implements ITradingService {
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ VENTA ejecutada: ${order.amount} BTC @ $${order.price}`);
+        console.log(`✅ VENTA ejecutada: ${order.amount} BTC @ $${order.price} por ${revenue} USDT`);
       } else {
-        throw new Error('BTC insuficiente en paper trading');
+        throw new Error(`BTC insuficiente en paper trading: ${this.balance().BTC} BTC < ${order.amount} BTC`);
       }
     }
+    // Para 'HOLD' no hacemos nada
   }
 
   /**
@@ -305,7 +305,6 @@ export class PaperTradingService implements ITradingService {
     return this.autoTradingEnabled();
   }
 
-
   /**
     * Habilitar/deshabilitar trading automático
     */
@@ -378,20 +377,24 @@ export class PaperTradingService implements ITradingService {
   }
 
   /**
-   * Calcular tamaño de orden automática basado en balance y riesgo
+   * Calcular tamaño de orden automática basado en balance y riesgo - CORREGIDO
    */
   private calculateAutoOrderSize(decision: 'BUY' | 'SELL' | 'HOLD', currentPrice: number): { amount: number } {
     const balance = this.balance();
     const riskPercent = 0.02; // 2% del balance por operación
 
     if (decision === 'BUY') {
+      // COMPRA: Usar USDT para comprar BTC
       const maxInvestment = balance.USDT * riskPercent;
       const amount = maxInvestment / currentPrice;
       return { amount: this.roundAmount(amount) };
-    } else {
+    } else if (decision === 'SELL') {
+      // VENTA: Usar BTC para vender - CORREGIDO
       const maxSale = balance.BTC * riskPercent;
       return { amount: this.roundAmount(maxSale) };
     }
+    
+    return { amount: 0 }; // Para HOLD
   }
 
   /**
@@ -420,7 +423,7 @@ export class PaperTradingService implements ITradingService {
       return false;
     }
 
-    // Verificar balance suficiente
+    // Verificar balance suficiente - CORREGIDO
     const balance = this.balance();
     if (aiResponse.decision === 'BUY' && balance.USDT < 1) {
       console.log('⚠️  Balance USDT insuficiente para compra');
@@ -435,5 +438,4 @@ export class PaperTradingService implements ITradingService {
     console.log(`✅ Condiciones cumplidas para ejecutar ${aiResponse.decision}`);
     return true;
   }
-
 }
