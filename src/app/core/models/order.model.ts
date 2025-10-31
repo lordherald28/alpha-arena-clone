@@ -20,24 +20,25 @@ export enum OrderSide {
 
 export interface Balance {
     currency: string;
-    available: string;
+    available: number;
     frozen: number;
     USDT: number;
     BTC: number;
     totalUSDT: number;
 }
 
-export interface Order {
-    order_id: string;
-    market: string;
-    side: 'buy' | 'sell';
-    type: 'limit' | 'market';
-    amount: string;
-    price: string;
-    status: 'pending' | 'filled' | 'canceled' | 'partial_filled';
-    created_at: number;
-}
+// export interface Order {
+//     order_id: string;
+//     market: string;
+//     side: 'buy' | 'sell';
+//     type: 'limit' | 'market';
+//     amount: string;
+//     price: string;
+//     status: 'pending' | 'filled' | 'canceled' | 'partial_filled';
+//     created_at: number;
+// }
 
+// type tStatus: string[] = ['open' | 'filled' | 'canceled' | 'closed'];
 // models/trading.model.ts
 export interface TradingOrder {
     id: string;
@@ -67,13 +68,13 @@ export interface PaperTradingConfig {
     defaultRiskPercent: number; // % de riesgo por operación
 }
 
-export interface Order {
-    order_id: string;
-    market: string;
-    side: 'buy' | 'sell';
-    type: 'market' | 'limit';
-    amount: string;
-    price: string;
-    status: 'pending' | 'filled' | 'canceled' | 'partial_filled';
-    created_at: number;
-}
+// export interface Order {
+//     order_id: string;
+//     market: string;
+//     side: 'buy' | 'sell';
+//     type: 'market' | 'limit';
+//     amount: string;
+//     price: string;
+//     status: 'pending' | 'filled' | 'canceled' | 'partial_filled';
+//     created_at: number;
+// }

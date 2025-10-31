@@ -91,7 +91,7 @@ export class TradingLogicService {
       console.log(`💰 Precio actual: ${currentPrice}`);
 
       // 1. Primero verificar y cerrar órdenes existentes
-      this.paperTrading.checkOrders(currentPrice);
+      // this.paperTrading.checkOrders(currentPrice);
 
       // 2. Análisis de IA
       this.glmAiService.analyzeMarket(candles).subscribe(aiResponse => {

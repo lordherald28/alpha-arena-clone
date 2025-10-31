@@ -8,12 +8,16 @@ import { environment as envProd } from '../../environments/environment.prod';
 import { RSI, MACD, ATR, EMA } from 'technicalindicators';
 import { PaperTradingService } from './paper-trading.service';
 
+// TODO deuda tecnica aqui, hay ciertas funcionalidades o variables que no deberian ser de esta clase, deben estar en el servicio del broker
 @Injectable({
   providedIn: 'root'
 })
 export class GlmAiService {
   private apiUrl = environment.production ? envProd.glmAi.baseUrl : environment.glmAi.baseUrl;
   private paperTrading = inject(PaperTradingService);
+
+  readonly currentAtr = signal<number>(0); // ← readonly para seguridad
+ 
 
   constructor(private http: HttpClient) {
     console.log('apiUrl: ', this.apiUrl);
@@ -112,6 +116,9 @@ export class GlmAiService {
       const lastEma660 = ema660[ema660.length - 1];
       const lastAtr14 = atr14[atr14.length - 1];
       const lastMacd = macd[macd.length - 1];
+
+      // Actualizar ultimo atr
+      this.currentAtr.set(lastAtr14);
 
       // ✅ DEBUG COMPLETO - CRÍTICO
       console.log('🐛 DEBUG COMPLETO INDICADORES:', {

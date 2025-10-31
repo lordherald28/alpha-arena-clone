@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Signal, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of, throwError } from 'rxjs';
-import { Balance, Candlestick, Order } from '../models';
+import { Balance, Candlestick, TradingOrder } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 
 import { environment } from '../../environments/environment';
@@ -11,7 +11,10 @@ import { environment as envProd } from '../../environments/environment.prod';
   providedIn: 'root'
 })
 export class CoinexService implements ITradingService {
+
   private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
+  readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
+
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
@@ -25,7 +28,7 @@ export class CoinexService implements ITradingService {
     return of([]);
   }
 
-  getOpenOrders(market: string): Observable<Order[]> {
+  getOpenOrders(market: string): Observable<TradingOrder[]> {
     return of([]);
   }
 
@@ -56,6 +59,8 @@ export class CoinexService implements ITradingService {
     return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } }).pipe(
       map(response => {
         if (response.code === 0 && response.data) {
+          // Obtener precio actua
+          this.currentPriceMarketSymbol.set(response.data[0].close);
           const candles = response.data.map((item: any) => ({
             timestamp: item.created_at,
             open: parseFloat(item.open),

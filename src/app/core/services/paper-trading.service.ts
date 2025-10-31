@@ -1,22 +1,26 @@
 // services/paper-trading.service.ts
-import { inject, Injectable, signal } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { TradingOrder, PaperTradingConfig, Candlestick, Balance } from '../models';
+import { effect, inject, Injectable, OnDestroy, OnInit, Signal, signal } from '@angular/core';
+import { catchError, interval, Observable, of, Subscription, switchMap } from 'rxjs';
+import { TradingOrder, PaperTradingConfig, Candlestick, Balance, AiResponse } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 import { CoinexService } from './coinex.service';
 import { environment } from '../../environments/environment';
+import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eRiskRewards, eSTATUS, MAX_ORDEN_OPEN, MINCONFIDENCE, typeRiskRewards } from '../utils/const.utils';
+import { GlmAiService } from './glm-ai.service';
 
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Injectable({
   providedIn: 'root'
 })
-export class PaperTradingService implements ITradingService {
+export class PaperTradingService implements ITradingService, OnDestroy {
+
   private balance = signal<Balance>({
     USDT: environment.paperTrading.initialBalance, // Balance inicial en USDT
     BTC: 0,
     totalUSDT: environment.paperTrading.initialBalance,
     currency: '',
-    available: '',
+    available: 0,
     frozen: 0
   });
 
@@ -27,20 +31,74 @@ export class PaperTradingService implements ITradingService {
   private autoTradingEnabled = signal<boolean>(false);
   private lastAIDecision = signal<{ decision: string, confidence: number } | null>(null);
 
+  private glmService = inject(GlmAiService);
+  private marketData = signal<{ market: string, interval: string, limit: number }>({
+    market: environment.trading.pair,
+    interval: environment.trading.interval,
+    limit: 1
+  });
+
+  private $subs = new Subscription();
+
   private config: PaperTradingConfig = {
     initialBalance: +this.balance().USDT,
     fee: environment.paperTrading.fee,
-    defaultRiskPercent: environment.paperTrading.defaultRisk
+    defaultRiskPercent: environment.paperTrading.defaultRisk // TODO ver como calcular y determinar si el riesto debe ser muy bajo por poco capital disponible
   };
 
   constructor(
     private readonly serviceCoinex: CoinexService
   ) {
     console.log('📊 Paper Trading iniciado con balance:', this.balance());
+    console.log(`📞 Obteniendo el ultimo precio del symbol: ${this.marketData().market}`);
+    this.setupAutoOrderMonitoring();
+  }
+  readonly currentPriceMarketSymbol = signal<number>(0);
+
+  ngOnDestroy(): void {
+    this.$subs.unsubscribe();
+  }
+
+
+  private setupAutoOrderMonitoring(): void {
+    effect(() => {
+      const currentPrice = this.currentPriceMarketSymbol();
+      const openOrders = this.openOrders();
+
+      if (currentPrice > 0 && openOrders.length > 0) {
+        // Versión optimizada de checkOrders
+        const ordersToClose = openOrders.filter(order =>
+          (order.side === DESITION.BUY && (currentPrice >= order.tp! || currentPrice <= order.sl!)) ||
+          (order.side === DESITION.SELL && (currentPrice <= order.tp! || currentPrice >= order.sl!))
+        );
+
+        if (ordersToClose.length > 0) {
+          this.closeOrders(ordersToClose);
+        }
+      }
+    });
+  }
+
+  // ✅ Método separado para monitoreo de precios
+  private startPriceMonitoring(): void {
+    this.$subs = interval(30000).pipe( // Cada 30 segundos
+      switchMap(() => this.getCandles(this.marketData().market, this.marketData().interval, this.marketData().limit)),
+      catchError(err => {
+        console.error('Price monitoring error:', err);
+        return of(null);
+      })
+    ).subscribe(candles => {
+      if (candles && candles.length > 0) {
+        this.currentPriceMarketSymbol.set(candles[0].close);
+      }
+    });
   }
 
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
-    return this.serviceCoinex.getCandles(market, interval, limit)
+    const candles = this.serviceCoinex.getCandles(market, interval, limit);
+    //Actualiza los datos del market data
+    this.marketData.set({ market, interval, limit });
+    return candles;
   }
 
   /**
@@ -120,10 +178,10 @@ export class PaperTradingService implements ITradingService {
    * ✅ NUEVO: Calcular TP/SL basado en ATR (Estrategia crypto)
    */
   private calculateTPnSLByATR(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number, atr: number): { tp: number, sl: number } {
-    const atrMultiplierSL = 1.5;   // 1.5 x ATR para SL
-    const atrMultiplierTP = 2.25;  // 2.25 x ATR para TP
+    const atrMultiplierSL = ATR_MULTIPLIER_SL;   // 1.5 x ATR para SL
+    const atrMultiplierTP = ATR_MULTIPLIER_TP;  // 2.25 x ATR para TP
 
-    if (side === 'BUY') {
+    if (side === DESITION.BUY) {
       return {
         sl: entryPrice - (atr * atrMultiplierSL),
         tp: entryPrice + (atr * atrMultiplierTP)
@@ -142,7 +200,7 @@ export class PaperTradingService implements ITradingService {
   private calculateTPnSLByPercent(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number): { tp: number, sl: number } {
     const riskRewardRatio = 2;
 
-    if (side === 'BUY') {
+    if (side === DESITION.BUY) {
       const sl = entryPrice * (1 - this.config.defaultRiskPercent);
       const tp = entryPrice * (1 + (this.config.defaultRiskPercent * riskRewardRatio));
       return { tp, sl };
@@ -154,41 +212,42 @@ export class PaperTradingService implements ITradingService {
   }
 
   /**
-   * Ejecutar orden y actualizar balance
+   * Ejecutar orden y actualizar balance // TODO deuda tecnica en trading calculo de operaciones en real.
    */
   private executeOrder(order: TradingOrder): void {
     const fee = order.amount * order.price * this.config.fee;
 
-    if (order.side === 'BUY') {
-      const cost = order.amount * order.price + fee;
+    if (order.side === DESITION.BUY) {
+      const cost = order.amount * order.price + fee; // el costo de la operacion
 
-      if (this.balance().USDT >= cost) {
+      if (+this.balance().available >= cost) {
         this.balance.update(bal => ({
           ...bal,
           USDT: bal.USDT - cost,
-          BTC: bal.BTC + order.amount,
-          totalUSDT: this.calculateTotalValue(bal.USDT - cost, bal.BTC + order.amount, order.price)
+          available: bal.available - cost, // No entiendo, esto no se deberia actualizar, seria el aviable y restar.
+          // BTC: bal.BTC + order.amount,
+          // totalUSDT: this.calculateTotalValue(bal.USDT - cost, bal.BTC + order.amount, order.price)
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ COMPRA ejecutada: ${order.amount} BTC @ $${order.price} por ${cost} USDT`);
+        console.log(`✅ COMPRA ejecutada: ${order.price} por ${cost} USDT`);
       } else {
-        throw new Error(`Saldo insuficiente: ${this.balance().USDT} USDT < ${cost} USDT`);
+        throw new Error(`Saldo insuficiente: ${this.balance().USDT} $USDT < ${cost} $USDT`);
       }
 
-    } else if (order.side === 'SELL') {
-      const revenue = order.amount * order.price - fee;
-
-      if (this.balance().BTC >= order.amount) {
+    } else if (order.side === DESITION.SELL) {
+      // const revenue = order.amount * order.price - fee;
+      const cost: number = order.amount * order.price + fee; // el costo de la operacion
+      if (+this.balance().available >= order.amount) {
         this.balance.update(bal => ({
           ...bal,
-          USDT: bal.USDT + revenue,
-          BTC: bal.BTC - order.amount,
-          totalUSDT: this.calculateTotalValue(bal.USDT + revenue, bal.BTC - order.amount, order.price)
+          available: bal.available - cost, // No entiendo, esto no se deberia actualizar, seria el aviable y restar.
+          // BTC: bal.BTC - order.amount,
+          // totalUSDT: this.calculateTotalValue(bal.USDT + cost, bal.BTC - order.amount, order.price)
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ VENTA ejecutada: ${order.amount} BTC @ $${order.price} por ${revenue} USDT`);
+        console.log(`✅ VENTA ejecutada: ${order.price} por ${cost} $USDT`);
       } else {
         throw new Error(`BTC insuficiente: ${this.balance().BTC} BTC < ${order.amount} BTC`);
       }
@@ -198,40 +257,40 @@ export class PaperTradingService implements ITradingService {
   /**
    * Verificar órdenes abiertas contra el precio actual
    */
-  checkOrders(currentPrice: number): void {
-    const openOrders = this.openOrders();
-    const ordersToClose: TradingOrder[] = [];
+  // checkOrders(currentPrice: number): void {
+  //   const openOrders = this.openOrders();
+  //   const ordersToClose: TradingOrder[] = [];
 
-    openOrders.forEach(order => {
-      let closeReason: 'tp' | 'sl' | null = null;
+  //   openOrders.forEach(order => {
+  //     let closeReason: typeRiskRewards = null;
 
-      if (order.side === 'BUY') {
-        if (order.tp && currentPrice >= order.tp) {
-          closeReason = 'tp';
-        } else if (order.sl && currentPrice <= order.sl) {
-          closeReason = 'sl';
-        }
-      } else {
-        if (order.tp && currentPrice <= order.tp) {
-          closeReason = 'tp';
-        } else if (order.sl && currentPrice >= order.sl) {
-          closeReason = 'sl';
-        }
-      }
+  //     if (order.side === DESITION.BUY) {
+  //       if (order.tp && currentPrice >= order.tp) {
+  //         closeReason = eRiskRewards.TP;
+  //       } else if (order.sl && currentPrice <= order.sl) {
+  //         closeReason = eRiskRewards.SL;
+  //       }
+  //     } else {
+  //       if (order.tp && currentPrice <= order.tp) {
+  //         closeReason = eRiskRewards.TP;
+  //       } else if (order.sl && currentPrice >= order.sl) {
+  //         closeReason = eRiskRewards.SL;
+  //       }
+  //     }
 
-      if (closeReason) {
-        order.status = 'closed';
-        order.closePrice = currentPrice;
-        order.closeReason = closeReason;
-        order.pnl = this.calculatePNL(order);
-        ordersToClose.push(order);
-      }
-    });
+  //     if (closeReason) {
+  //       order.status = 'closed';
+  //       order.closePrice = currentPrice;
+  //       order.closeReason = closeReason;
+  //       order.pnl = this.calculatePNL(order);
+  //       ordersToClose.push(order);
+  //     }
+  //   });
 
-    if (ordersToClose.length > 0) {
-      this.closeOrders(ordersToClose);
-    }
-  }
+  //   if (ordersToClose.length > 0) {
+  //     this.closeOrders(ordersToClose);
+  //   }
+  // }
 
   /**
    * Calcular P&L de una orden
@@ -285,16 +344,16 @@ export class PaperTradingService implements ITradingService {
    */
   private getCurrentMarketPrice(): number {
     // TODO: Implementar con signal real
-    return 50000;
+    return this.currentPriceMarketSymbol();
   }
 
   /**
    * ✅ NUEVO: Obtener ATR actual (necesitas implementar esto)
    */
-  private getCurrentATR(): number | null {
+  private getCurrentATR(): number | 0 {
     // TODO: Implementar obtención de ATR actual
     // Por ahora retornar null para usar fallback
-    return null;
+    return this.glmService.currentAtr();
   }
 
   /**
@@ -324,7 +383,7 @@ export class PaperTradingService implements ITradingService {
       BTC: 0,
       totalUSDT: initialBalance,
       currency: '',
-      available: '',
+      available: 0,
       frozen: 0
     });
     this.openOrders.set([]);
@@ -354,7 +413,7 @@ export class PaperTradingService implements ITradingService {
       reason: string
     },
     currentPrice: number,
-    atr?: number  // ✅ NUEVO: Parámetro ATR opcional
+    atr?: number  // ✅ Parámetro ATR opcional
   ): void {
     console.log(`🤖 Procesando decisión de IA:`, {
       decision: aiResponse.decision,
@@ -364,7 +423,7 @@ export class PaperTradingService implements ITradingService {
       currentPrice: currentPrice
     });
 
-    this.lastAIDecision.set(aiResponse);
+    this.lastAIDecision.set({ decision: aiResponse.decision, confidence: aiResponse.confidence });
 
     if (this.autoTradingEnabled()) {
       console.log(`🔍 Evaluando condiciones para ${aiResponse.decision}...`);
@@ -394,12 +453,12 @@ export class PaperTradingService implements ITradingService {
       const order: TradingOrder = {
         id: `auto_${Date.now()}`,
         market: environment.trading.pair,
-        side: decision,
+        side: decision, // es decir, me voy en largo o me voy corto.
         type: 'market',
         amount: orderConfig.amount,
         price: currentPrice,
         timestamp: Date.now(),
-        status: 'filled'
+        status: eSTATUS.FILLED
       };
 
       // ✅ USAR ATR SI ESTÁ DISPONIBLE, SINO PORCENTAJE
@@ -424,20 +483,21 @@ export class PaperTradingService implements ITradingService {
   }
 
   /**
-   * Calcular tamaño de orden automática basado en balance y riesgo
+   * Calcular tamaño de orden automática basado en balance y riesgo // TODO ver esto para que y hacerlo mas simple
    */
   private calculateAutoOrderSize(decision: 'BUY' | 'SELL' | 'HOLD', currentPrice: number): { amount: number } {
     const balance = this.balance();
-    const riskPercent = 0.02; // 2% del balance por operación
+    const riskPercent = this.config.defaultRiskPercent ?? environment.paperTrading.defaultRisk; // 2% del balance por operación
 
-    if (decision === 'BUY') {
-      const maxInvestment = balance.USDT * riskPercent;
-      const amount = maxInvestment / currentPrice;
+    if (decision === DESITION.BUY || DESITION.SELL) {
+      const maxInvestment = +balance.available * riskPercent; // TODO REVISAR PARA PROPUESTA EN REAL disponibilidad * %riesgo (10usdt * 0.02)
+      // const amount = maxInvestment / currentPrice;
+      const amount = maxInvestment;
       return { amount: this.roundAmount(amount) };
-    } else if (decision === 'SELL') {
+    } /* else if (decision === 'SELL') {
       const maxSale = balance.BTC * riskPercent;
       return { amount: this.roundAmount(maxSale) };
-    }
+    } */
 
     return { amount: 0 };
   }
@@ -457,7 +517,7 @@ export class PaperTradingService implements ITradingService {
     currentPrice: number,
     atr?: number
   ): boolean {
-    const minConfidence = 0.7; // ✅ REDUCIDO a 0.7 según nuevo prompt
+    const minConfidence = MINCONFIDENCE; // ✅ REDUCIDO a 0.7 según nuevo prompt
 
     if (aiResponse.decision === 'HOLD' || aiResponse.confidence < minConfidence) {
       console.log(`⏸️ No ejecutar: ${aiResponse.decision} con confianza ${aiResponse.confidence}`);
@@ -471,22 +531,27 @@ export class PaperTradingService implements ITradingService {
     }
 
     // No ejecutar si ya hay muchas órdenes abiertas
-    if (this.openOrders().length >= 3) {
-      console.log('⚠️ Máximo de órdenes abiertas alcanzado');
+    if (this.openOrders().length >= MAX_ORDEN_OPEN) {
+      console.log('⚠️ Máximo de órdenes abiertas alcanzado, no se puede ejecutar la operacion.');
       return false;
     }
 
-    // Verificar balance suficiente
+    // Verificar balance suficiente // TODO verificar cual si usar el balance aviable como disponible y cual de ellos se va a actualizar.
     const balance = this.balance();
-    if (aiResponse.decision === 'BUY' && balance.USDT < 1) {
-      console.log('⚠️ Balance USDT insuficiente para compra');
-      return false;
+    if (+balance.available < 1) {
+      console.log(`⚠️ Balance USDT insuficiente para realizar la operacion: ${balance.available} $USDT`); // TODO hacer una notificacion y mostrar mensaje en panel
+      return false; // Si tienes menor que 1 USDT no se procede a realizar la operacion (BUY | SELL)
     }
 
-    if (aiResponse.decision === 'SELL' && balance.BTC <= 0) {
-      console.log('⚠️ Balance BTC insuficiente para venta');
-      return false;
-    }
+    // if (aiResponse.decision === 'BUY') {
+    //   console.log('⚠️ Balance USDT insuficiente para compra');
+    //   return false;
+    // }
+
+    // if (aiResponse.decision === 'SELL' && balance.BTC <= 0) {
+    //   console.log('⚠️ Balance BTC insuficiente para venta');
+    //   return false;
+    // }
 
     console.log(`✅ Condiciones cumplidas para ejecutar ${aiResponse.decision}`);
     return true;
