@@ -4,7 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import * as CryptoJS from 'crypto-js';
 import { environment } from '../../environments/environment';
-import { Balance, Order } from '../models';
+import { Balance, TradingOrder } from '../models';
 
 
 
@@ -21,7 +21,7 @@ export class TradingExecutionService {
 
   // Signals para estado reactivo
   public balance = signal<Balance[]>([]);
-  public openOrders = signal<Order[]>([]);
+  public openOrders = signal<TradingOrder[]>([]);
 
   constructor(private http: HttpClient) { }
 
@@ -111,7 +111,7 @@ export class TradingExecutionService {
         map(response => {
           console.log('📨 Respuesta balance:', response);
           if (response.code === 0) {
-            const balances = response.data.filter(b => parseFloat(b.available) > 0 || b.frozen > 0);
+            const balances = response.data.filter(b => b.available > 0 || b.frozen > 0);
             this.balance.set(balances);
             console.log('💰 Balance actualizado:', balances);
             return balances;

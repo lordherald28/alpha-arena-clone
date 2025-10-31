@@ -21,10 +21,10 @@ export class OrdenListComponent implements OnInit {
   public emitirMensaje = output<string>();
 
   //Evento del hijo para emitir al padre
-  onClickEmitirEvento(){
-    this.emitirMensaje.emit('Hola papa, soy tu hijo order list.');
+  runQuickTest() {
+    this.emitirMensaje.emit('Ejecutando prueba de Paper Trading desde OrdenListComponent');
   }
-  
+
   // ✅ INYECTAR servicio
   private paperTrading = inject(PaperTradingService);
 
