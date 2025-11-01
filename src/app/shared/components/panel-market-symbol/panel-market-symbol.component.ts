@@ -1,6 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Component, OnInit, Signal, signal, output } from '@angular/core';
+import { Component, OnInit, Signal, signal, output, inject } from '@angular/core';
+import { TypeMarket } from '../../../core/models';
+import { PaperTradingService } from '../../../core/services/paper-trading.service';
+import { CoinexService } from '../../../core/services/coinex.service';
 
 type TimeFrame = { label: string, value: string };
 
@@ -50,7 +53,13 @@ export class PanelMarketSymbolComponent implements OnInit {
   }
 
   oncAcceptConfMarket(): void {
-
+    const marketData: TypeMarket = {
+      interval: this.timeframeControl.value ? this.timeframeControl.value : '5min',
+      limit: this.limitControl.value ? this.limitControl.value : 1000,
+      market: this.pairControl.value ? this.pairControl.value : 'BTCUSDT'
+    }
+    inject(PaperTradingService).setMaketData(marketData); // TODO aqui no es donde esto se cambia deuda tecnica
+    inject(CoinexService).setMaketData(marketData); // TODO aqui no es donde esto se cambia deuda tecnica
     this.pairChange.emit(this.pairControl.value ? this.pairControl.value : 'BTCUSDT');
     if (this.timeframeControl.value) {
       this.timeframeChange.emit(this.timeframeControl.value);

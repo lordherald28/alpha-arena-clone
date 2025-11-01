@@ -1,14 +1,12 @@
 // services/paper-trading.service.ts
-import { effect, inject, Injectable, OnDestroy, OnInit, Signal, signal } from '@angular/core';
+import { effect, Injectable, OnDestroy, signal } from '@angular/core';
 import { catchError, interval, Observable, of, Subscription, switchMap, tap } from 'rxjs';
-import { TradingOrder, PaperTradingConfig, Candlestick, Balance, AiResponse } from '../models';
+import { TradingOrder, PaperTradingConfig, Candlestick, Balance, AiResponse, TypeMarket } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 import { CoinexService } from './coinex.service';
 import { environment } from '../../environments/environment';
-import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eRiskRewards, eSTATUS, MAX_ORDEN_OPEN, MINCONFIDENCE, typeRiskRewards } from '../utils/const.utils';
-import { GlmAiService } from './glm-ai.service';
+import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eSTATUS, MAX_ORDEN_OPEN, MINCONFIDENCE } from '../utils/const.utils';
 
-import { toSignal } from '@angular/core/rxjs-interop';
 import { ATR } from 'technicalindicators';
 
 @Injectable({
@@ -77,6 +75,11 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     this.$currentAtr.set(atr14[atr14.length - 1]);
   }
 
+  setMaketData(marketData: TypeMarket): void {
+    console.log('Actualizado: ', this.marketData());
+    this.marketData.set(marketData)
+  }
+
   private setupAutoOrderMonitoring(): void {
     effect(() => {
       const currentPrice = this.currentPriceMarketSymbol();
@@ -115,7 +118,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
     const candles = this.serviceCoinex.getCandles(market, interval, limit);
     //Actualiza los datos del market data
-    this.marketData.set({ market, interval, limit });
+    // this.marketData.set({ market, interval, limit });
     // this.$candles.set(toSignal(candles as Candlestick[], { initialValue: [] }))
     return candles;
   }

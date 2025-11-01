@@ -1,7 +1,7 @@
 import { Injectable, Signal, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of, throwError } from 'rxjs';
-import { Balance, Candlestick, TradingOrder } from '../models';
+import { Balance, Candlestick, TradingOrder, TypeMarket } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 
 import { environment } from '../../environments/environment';
@@ -15,6 +15,12 @@ export class CoinexService implements ITradingService {
   private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
   readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
 
+  private marketData = signal<TypeMarket>({
+    market: environment.trading.pair,
+    interval: environment.trading.interval,
+    limit: 1
+  });
+
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
@@ -23,6 +29,12 @@ export class CoinexService implements ITradingService {
   ];
 
   constructor(private http: HttpClient) { console.log('BASE_URL: ', this.BASE_URL) }
+
+  setMaketData(marketData: TypeMarket): void {
+    console.log('Actualizado: ', this.marketData());
+    this.marketData.set(marketData)
+  }
+
 
   getAccountBalance(): Observable<Balance[]> {
     return of([]);
@@ -36,6 +48,13 @@ export class CoinexService implements ITradingService {
     return of(null);
   }
 
+  /**
+   * TODO Esto no sirve recibir los datos por parametros del market data, porque cuando lo cambias no es el que viene actualizado.
+   * @param market 
+   * @param interval 
+   * @param limit 
+   * @returns 
+   */
   getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
     if (!this.VALID_INTERVALS.includes(interval)) {
       return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
@@ -45,16 +64,12 @@ export class CoinexService implements ITradingService {
 
 
     const params = new HttpParams()
-      .set('market', market.toUpperCase())
-      .set('limit', limit.toString())
-      .set('period', interval)
+      .set('market', this.marketData().market.toUpperCase())
+      .set('limit', this.marketData().limit.toString())
+      .set('period', this.marketData().interval)
     // .set('period', '');
 
-    console.log('🔍 Parámetros enviados:', {
-      market: market.toUpperCase(),
-      period: interval,
-      limit: limit.toString()
-    });
+    console.log('🔍 Parámetros enviados:', this.marketData());
 
     return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } }).pipe(
       map(response => {
