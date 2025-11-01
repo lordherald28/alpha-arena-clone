@@ -1,4 +1,4 @@
-import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
+import { Injectable, WritableSignal, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Candlestick, AiResponse, Balance } from '../models';
@@ -17,10 +17,9 @@ export class GlmAiService {
   private paperTrading = inject(PaperTradingService);
 
   readonly currentAtr = signal<number>(0); // ← readonly para seguridad
- 
+
 
   constructor(private http: HttpClient) {
-    console.log('apiUrl: ', this.apiUrl);
     this.paperTrading.getAccountBalance().subscribe((balance: Balance[]) => {
       this.accountBalance.set(+balance[0].available)
     })
@@ -121,44 +120,44 @@ export class GlmAiService {
       this.currentAtr.set(lastAtr14);
 
       // ✅ DEBUG COMPLETO - CRÍTICO
-      console.log('🐛 DEBUG COMPLETO INDICADORES:', {
-        // Datos de entrada
-        totalVelas: candles.length,
-        ultimos5Closes: closes.slice(-5),
+      // console.log('🐛 DEBUG COMPLETO INDICADORES:', {
+      //   // Datos de entrada
+      //   totalVelas: candles.length,
+      //   ultimos5Closes: closes.slice(-5),
 
-        // Valores actuales
-        ultimaVela: {
-          timestamp: new Date(lastCandle.timestamp),
-          close: lastClose,
-          high: lastCandle.high,
-          low: lastCandle.low,
-          volume: lastVolume
-        },
+      //   // Valores actuales
+      //   ultimaVela: {
+      //     timestamp: new Date(lastCandle.timestamp),
+      //     close: lastClose,
+      //     high: lastCandle.high,
+      //     low: lastCandle.low,
+      //     volume: lastVolume
+      //   },
 
-        // Indicadores calculados
-        indicadores: {
-          rsi: lastRsi,
-          ema660: lastEma660,
-          atr14: lastAtr14,
-          macd: lastMacd
-        },
+      //   // Indicadores calculados
+      //   indicadores: {
+      //     rsi: lastRsi,
+      //     ema660: lastEma660,
+      //     atr14: lastAtr14,
+      //     macd: lastMacd
+      //   },
 
-        // Flags calculados
-        flags: {
-          priceBelowEma660: lastClose < lastEma660, // Tendencia bajista
-          priceEncimaEma660: lastClose > lastEma660, // Tendencia Alcista
-          rsiOverbought: lastRsi > 70, // Sobrecomprado
-          rsiOversold: lastRsi < 30 // Sobrevendido
-        },
+      //   // Flags calculados
+      //   flags: {
+      //     priceBelowEma660: lastClose < lastEma660, // Tendencia bajista
+      //     priceEncimaEma660: lastClose > lastEma660, // Tendencia Alcista
+      //     rsiOverbought: lastRsi > 70, // Sobrecomprado
+      //     rsiOversold: lastRsi < 30 // Sobrevendido
+      //   },
 
-        // Verificación de arrays
-        longitudes: {
-          rsi: rsi.length,
-          ema660: ema660.length,
-          atr14: atr14.length,
-          macd: macd.length
-        }
-      });
+      //   // Verificación de arrays
+      //   longitudes: {
+      //     rsi: rsi.length,
+      //     ema660: ema660.length,
+      //     atr14: atr14.length,
+      //     macd: macd.length
+      //   }
+      // });
 
       // Derivados
       const isBelowEma660 = lastClose < lastEma660;
@@ -169,13 +168,13 @@ export class GlmAiService {
         : 'unknown';
 
       // Si el RSI está en 34, estos flags DEBEN ser:
-      console.log('🎯 VERIFICACIÓN FLAGS RSI:', {
-        rsiValue: lastRsi,
-        shouldBeOverbought: isRsiOverbought, // Debe ser FALSE
-        shouldBeOversold: isRsiOversold,     // Debe ser TRUE
-        actualOverbought: isRsiOverbought,
-        actualOversold: isRsiOversold
-      });
+      // console.log('🎯 VERIFICACIÓN FLAGS RSI:', {
+      //   rsiValue: lastRsi,
+      //   shouldBeOverbought: isRsiOverbought, // Debe ser FALSE
+      //   shouldBeOversold: isRsiOversold,     // Debe ser TRUE
+      //   actualOverbought: isRsiOverbought,
+      //   actualOversold: isRsiOversold
+      // });
 
       // Prompt tipo Alpha Arena
       return `
@@ -192,14 +191,15 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - Account Balance: ${this.accountBalance()} USDT
 - Available Balance: ${this.accountBalance()} USDT
 
-- Max Simultaneous Positions: 3
-
 **MAIN TECHNICAL INDICATORS:**
 - EMA 660: ${lastEma660} (dominant trend)
-- RSI 7: ${lastRsi} (short-term momentum)
+- RSI 7: ${lastRsi} (short-term or long-term momentum)
+- isRsiOverbought: ${isRsiOverbought}
+- isRsiOversold: ${isRsiOversold}
 - PREVIOUS RSI 7: ${previousRsi} (for first touch detection)
 - ATR 14: ${lastAtr14} (volatility and risk management)
 - MACD: ${lastMacd?.MACD} | Signal: ${lastMacd?.signal} | Histogram: ${lastMacd?.histogram}
+
 
 **CRITICAL DERIVED STATES:**
 - Price vs EMA660: ${isBelowEma660 ? "BELOW" : "ABOVE"}

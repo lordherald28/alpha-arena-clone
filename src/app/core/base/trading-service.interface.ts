@@ -8,7 +8,7 @@ export interface ITradingService {
     // Propiedades necesarias
     readonly currentPriceMarketSymbol: Signal<number>;
     // Para datos de mercado
-    getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]>;
+    getCandles(/* market: string, interval: string, limit: number */): Observable<Candlestick[]>;
 
     // Para información de la cuenta y trading (requieren autenticación)
     getAccountBalance(): Observable<Balance[]>;

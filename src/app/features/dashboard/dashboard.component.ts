@@ -70,8 +70,8 @@ export class DashboardComponent implements OnInit {
     // Opcional: cargar datos iniciales al arrancar
   }
 
-  public startAnalysis(market: TypeMarket): void {
-    this.tradingLogic.startAnalysis(market);
+  public startAnalysis(/* market: TypeMarket */): void {
+    this.tradingLogic.startAnalysis(/* market */);
   }
 
   public stopAnalysis(): void {

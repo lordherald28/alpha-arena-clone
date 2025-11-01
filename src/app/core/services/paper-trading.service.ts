@@ -1,13 +1,14 @@
 // services/paper-trading.service.ts
-import { effect, Injectable, OnDestroy, signal } from '@angular/core';
+import { effect, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { catchError, interval, Observable, of, Subscription, switchMap, tap } from 'rxjs';
-import { TradingOrder, PaperTradingConfig, Candlestick, Balance, AiResponse, TypeMarket } from '../models';
+import { TradingOrder, PaperTradingConfig, Candlestick, Balance, TypeMarket } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 import { CoinexService } from './coinex.service';
 import { environment } from '../../environments/environment';
 import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eSTATUS, MAX_ORDEN_OPEN, MINCONFIDENCE } from '../utils/const.utils';
 
 import { ATR } from 'technicalindicators';
+import { StoreAppService } from '../store/store-app.service';
 
 @Injectable({
   providedIn: 'root'
@@ -47,11 +48,15 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     defaultRiskPercent: environment.paperTrading.defaultRisk // TODO ver como calcular y determinar si el riesto debe ser muy bajo por poco capital disponible
   };
 
+  // inject
+  private readonly storeAppService = inject(StoreAppService);
+
   constructor(
     private readonly serviceCoinex: CoinexService,
   ) {
-    console.log('📊 Paper Trading iniciado con balance:', this.balance());
-    console.log(`📞 Obteniendo el ultimo precio del symbol: ${this.marketData().market}`);
+    // console.log('📊 Paper Trading iniciado con balance:', this.balance());
+    // console.log(`📞 Obteniendo el ultimo precio del symbol: ${this.marketData().market}`);
+    this.marketData.set(this.storeAppService.getDataMarket());
     this.setupAutoOrderMonitoring();
     this.startPriceMonitoring();
   }
@@ -75,10 +80,10 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     this.$currentAtr.set(atr14[atr14.length - 1]);
   }
 
-  setMaketData(marketData: TypeMarket): void {
-    console.log('Actualizado: ', this.marketData());
-    this.marketData.set(marketData)
-  }
+  // setMaketData(marketData: TypeMarket): void {
+  //   console.log('Actualizado: ', this.marketData());
+  //   this.marketData.set(marketData)
+  // }
 
   private setupAutoOrderMonitoring(): void {
     effect(() => {
@@ -102,7 +107,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   // ✅ Método separado para monitoreo de precios
   private startPriceMonitoring(): void {
     this.$subs = interval(30000).pipe( // Cada 30 segundos
-      switchMap(() => this.getCandles(this.marketData().market, this.marketData().interval, this.marketData().limit)),
+      switchMap(() => this.getCandles()),
       tap(response => this.$candles.set(response)),
       catchError(err => {
         console.error('Price monitoring error:', err);
@@ -115,8 +120,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     });
   }
 
-  getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
-    const candles = this.serviceCoinex.getCandles(market, interval, limit);
+  getCandles(/* market: string, interval: string, limit: number */): Observable<Candlestick[]> {
+    const candles = this.serviceCoinex.getCandles();
     //Actualiza los datos del market data
     // this.marketData.set({ market, interval, limit });
     // this.$candles.set(toSignal(candles as Candlestick[], { initialValue: [] }))

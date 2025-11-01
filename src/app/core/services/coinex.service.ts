@@ -1,4 +1,4 @@
-import { Injectable, Signal, signal } from '@angular/core';
+import { inject, Injectable, Signal, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, of, throwError } from 'rxjs';
 import { Balance, Candlestick, TradingOrder, TypeMarket } from '../models';
@@ -6,19 +6,21 @@ import { ITradingService } from '../base/trading-service.interface';
 
 import { environment } from '../../environments/environment';
 import { environment as envProd } from '../../environments/environment.prod';
+import { StoreAppService } from '../store/store-app.service';
+import { IGetConfigDataMarket } from '../base/segregtion.interface';
 
 @Injectable({
   providedIn: 'root'
 })
-export class CoinexService implements ITradingService {
+export class CoinexService implements ITradingService, IGetConfigDataMarket {
 
   private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
   readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
 
   private marketData = signal<TypeMarket>({
-    market: environment.trading.pair,
-    interval: environment.trading.interval,
-    limit: 1
+    market: '',
+    interval: '',
+    limit: 0
   });
 
 
@@ -28,13 +30,19 @@ export class CoinexService implements ITradingService {
     '1day', '3day', '1week', '1month'
   ];
 
-  constructor(private http: HttpClient) { console.log('BASE_URL: ', this.BASE_URL) }
+  constructor(private http: HttpClient) { this.getDataMarket(); }
 
-  setMaketData(marketData: TypeMarket): void {
-    console.log('Actualizado: ', this.marketData());
-    this.marketData.set(marketData)
+  // inject
+  private readonly storeAppService = inject(StoreAppService);
+
+  getDataMarket(): void {
+    const configMarket = this.storeAppService.getDataMarket();
+    this.marketData.set({
+      market: configMarket.market,
+      interval: configMarket.interval,
+      limit: configMarket.limit
+    });
   }
-
 
   getAccountBalance(): Observable<Balance[]> {
     return of([]);
@@ -55,8 +63,8 @@ export class CoinexService implements ITradingService {
    * @param limit 
    * @returns 
    */
-  getCandles(market: string, interval: string, limit: number): Observable<Candlestick[]> {
-    if (!this.VALID_INTERVALS.includes(interval)) {
+  getCandles(): Observable<Candlestick[]> {
+    if (!this.VALID_INTERVALS.includes(this.marketData().interval)) {
       return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
     }
 

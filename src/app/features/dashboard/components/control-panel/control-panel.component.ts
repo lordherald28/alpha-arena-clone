@@ -24,7 +24,7 @@ export class ControlPanelComponent {
   // Creamos una propiedad de entrada para recibir el estado desde el padre.
   // Por defecto, será 'false'.
   public isRunning = input<boolean>(false);
-  public start = output<TypeMarket>();
+  public start = output<void>();
   public stop = output<void>();
 
   onPairChange($event: any) {
@@ -49,7 +49,7 @@ export class ControlPanelComponent {
   }
 
   onStart(): void {
-    this.start.emit(this.market());
+    this.start.emit(/* this.market() */);
   }
 
 }

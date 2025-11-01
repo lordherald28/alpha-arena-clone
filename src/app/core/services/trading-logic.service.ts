@@ -1,7 +1,6 @@
 // services/trading-logic.service.ts
 import { inject, Inject, Injectable, signal } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
-import { CoinexService } from './coinex.service';
 import { TradingExecutionService } from './trading-execution.service';
 import { GlmAiService } from './glm-ai.service';
 import { Candlestick, AiResponse, TypeMarket } from '../models';
@@ -47,14 +46,14 @@ export class TradingLogicService {
   /**
    * Iniciar análisis (SOLO análisis, NO ejecución)
    */
-  public startAnalysis(market?: TypeMarket): void {
+  public startAnalysis(/* market?: TypeMarket */): void {
     if (this.isRunning()) return;
 
     this.isRunning.set(true);
     console.log('🧠 Iniciando análisis de mercado...');
 
     // Ejecutar análisis inmediatamente y luego cada intervalo
-    this.runAnalysisCycle(market);
+    this.runAnalysisCycle(/* market */);
     // ✅ HABILITAR TRADING AUTOMÁTICO AL INICIAR
     this.enableAutoTrading();
     this.analysisSubscription = interval(5 * 60 * 1000).subscribe(() => {
@@ -75,14 +74,10 @@ export class TradingLogicService {
   /**
    * Ciclo de análisis (SOLO análisis)
    */
-  private runAnalysisCycle(market?: TypeMarket): void {
+  private runAnalysisCycle(/* market?: TypeMarket */): void {
     // console.log('🔄 Ejecutando ciclo de análisis...', new Date().toLocaleTimeString());
 
-    this.coinexService.getCandles(
-      market?.market ?? environment.trading.pair,
-      market?.interval ?? environment.trading.interval,
-      market?.limit ?? environment.trading.candleLimit
-    ).subscribe(candles => {
+    this.coinexService.getCandles().subscribe(candles => {
       this.candles.set(candles);
       this.lastUpdate.set(new Date());
 
