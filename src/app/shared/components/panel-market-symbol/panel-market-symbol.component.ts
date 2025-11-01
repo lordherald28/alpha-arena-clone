@@ -49,6 +49,7 @@ export class PanelMarketSymbolComponent implements OnInit {
     this.timeframes.set([
       { label: '1 Minuto', value: '1min' },
       { label: '5 Minutos', value: '5min' },
+      { label: '3 Minutos', value: '3min' },
       { label: '15 Minutos', value: '15min' },
       { label: '30 Minutos', value: '30min' },
       { label: '1 Hora', value: '1h' },

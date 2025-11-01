@@ -203,7 +203,7 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 
 **CRITICAL DERIVED STATES:**
 - Price vs EMA660: ${isBelowEma660 ? "BELOW" : "ABOVE"}
-- MACD Crossover: ${macdCross}
+- MACD Crossover: ${macdCross} like filter confirmation
 
 **RISK MANAGEMENT INTEGRATION:**
 - CURRENT BALANCE: ${this.accountBalance()} USDT

@@ -3,6 +3,7 @@ import { inject, Inject, Injectable, signal } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 import { TradingExecutionService } from './trading-execution.service';
 import { GlmAiService } from './glm-ai.service';
+import { GlmAiGeneralService } from './gml-ai-general.service';
 import { Candlestick, AiResponse, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { ITradingService } from '../base/trading-service.interface';
@@ -15,7 +16,7 @@ export class TradingLogicService {
   //Inject 
   // private marketData = inject(MarketDataService);
   private paperTrading = inject(PaperTradingService);
-  private glmAi = inject(GlmAiService);
+  // private glmAi = inject(GlmAiService);
 
   // Signals para el estado reactivo (MANTENER lo que ya funciona)
   public candles = signal<Candlestick[]>([]);
@@ -40,7 +41,7 @@ export class TradingLogicService {
     @Inject('ITradingService')
     private coinexService: ITradingService,
     private tradingExecution: TradingExecutionService, // ✅ NUEVO
-    private glmAiService: GlmAiService
+    private glmAiService: GlmAiGeneralService
   ) { }
 
   /**

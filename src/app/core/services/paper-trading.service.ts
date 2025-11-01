@@ -366,6 +366,10 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     })));
   }
 
+  getOpenOrdersNumber(market: string): number {
+    const orders = this.openOrders().filter((order: TradingOrder) => order.market === market);
+    return orders.length;
+  }
   /**
    * Obtener precio de mercado actual
    */
