@@ -25,7 +25,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     frozen: 0
   });
 
-  private openOrders = signal<TradingOrder[]>([]);
+  public openOrders = signal<TradingOrder[]>([]);
   private closedOrders = signal<TradingOrder[]>([]);
   private orderHistory = signal<TradingOrder[]>([]);
 
@@ -52,8 +52,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   ) {
     // console.log('📊 Paper Trading iniciado con balance:', this.balance());
     this.setupAutoOrderMonitoring();
-    this.startPriceMonitoring();
-    this.currentPriceMarketSymbol = this.serviceCoinex.currentPriceMarketSymbol;
+    // this.startPriceMonitoring();
+    // this.currentPriceMarketSymbol = this.serviceCoinex.currentPriceMarketSymbol;
     console.log('Datos del usuario: ', this.balance())
   }
   readonly currentPriceMarketSymbol = this.realTimePriceService.currentPrice;
@@ -80,7 +80,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     effect(() => {
       const currentPrice = this.currentPriceMarketSymbol();
       console.log('precio real de real time ws: ', currentPrice);
-      
+
       const openOrders = this.openOrders();
 
       if (currentPrice > 0 && openOrders.length > 0) {
@@ -94,7 +94,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
           this.closeOrders(ordersToClose);
         }
       }
-    });
+    }, {allowSignalWrites:true});
   }
 
   // ✅ Método separado para monitoreo de precios
@@ -237,7 +237,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     if (order.side === DESITION.BUY) {
       const cost = order.amount * order.price + fee; // el costo de la operacion
 
-      if (+this.balance().available >= cost) {
+      if (+this.balance().available >= 1) { // TODO: Deuda tecnica >= cost, cosas que debo ver 
         this.balance.update(bal => ({
           ...bal,
           USDT: bal.USDT - cost,
@@ -463,7 +463,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   }
 
   /**
-   * ✅ ACTUALIZADO: Lógica para ejecutar orden automática con ATR
+   * ✅ ACTUALIZADO: Lógica para ejecutar orden automática con ATR ESTE ES EL Q SE USA
    */
   private executeAutoOrder(
     decision: 'BUY' | 'SELL' | 'HOLD',

@@ -1,111 +1,126 @@
+import { Component, input, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, computed, Signal, input, output, signal, OnDestroy } from '@angular/core';
 import { TradingOrder } from '../../../core/models';
 import { PaperTradingService } from '../../../core/services/paper-trading.service';
-import { StoreAppService } from '../../../core/store/store-app.service';
-import { DESITION } from '../../../core/utils/const.utils';
 import { RealTimePriceService } from '../../../core/services/real-time-price.service';
+import { DESITION } from '../../../core/utils/const.utils';
+import { StoreAppService } from '../../../core/store/store-app.service';
 
 @Component({
   selector: 'app-orden-list',
   standalone: true,
-  imports: [CommonModule,],
+  imports: [CommonModule],
   templateUrl: './orden-list.component.html',
   styleUrls: ['./orden-list.component.scss']
 })
 export class OrdenListComponent implements OnInit, OnDestroy {
+  public entradaDesdePadre = input<string>('');
 
-  entradaDesdePadre = input<number>(2);
-
-  // OUTPUT emitir eventos al padre
-  public emitirMensaje = output<string>();
-
-  //Evento del hijo para emitir al padre
-  runQuickTest() {
-    this.emitirMensaje.emit('Ejecutando prueba de Paper Trading desde OrdenListComponent');
-  }
-
-  // ✅ INYECTAR servicio
-  private paperTrading = inject(PaperTradingService);
+  // Services
   private realTimePrice = inject(RealTimePriceService);
-  private marketData = inject(StoreAppService);
+  private paperTrading = inject(PaperTradingService);
+  private storeApp = inject(StoreAppService);
 
-  // ✅ SEÑAL COMPUTADA: Órdenes abiertas del servicio
-  ordenesSignal: Signal<TradingOrder[]> = computed(() => {
-    return this.paperTrading.getPaperOrders().open;
-  });
+  // Señal del precio actual
+  public currentPrice = this.realTimePrice.currentPrice;
 
-  // ✅ SEÑAL COMPUTADA: Resumen de órdenes
-  summary = computed(() => {
-    const ordenes = this.ordenesSignal();
-    return {
-      total: ordenes.length,
-      compras: ordenes.filter(order => order.side === 'BUY').length,
-      ventas: ordenes.filter(order => order.side === 'SELL').length
-    };
-  });
+  // ✅ CORREGIDO: Señal computada que se actualiza automáticamente
+  public ordenesConPNL = computed(() => {
+    const orders = this.paperTrading.getPaperOrders().open;
+    const currentPrice = this.currentPrice();
 
-  // ✅ SEÑAL COMPUTADA: Órdenes con P&L calculado
-  ordenesConPNL = computed(() => {
-    console.log('ordenes signal: ', this.ordenesSignal())
-    return this.ordenesSignal().map(orden => ({
-      ...orden,
-      pnlActual: this.calculateCurrentPNL(orden)
+    console.log('🔄 Recalculando P&L - Precio actual:', currentPrice);
+
+    return orders.map(order => ({
+      ...order,
+      pnlActual: this.calculateCurrentPNL(order, currentPrice)
     }));
   });
 
-  // SEÑAÑ COMPUTADA: Precio actual
+  // ✅ CORREGIDO: Summary también reactivo
+  public summary = computed(() => {
+    const ordenes = this.ordenesConPNL();
+    return {
+      total: ordenes.length,
+      compras: ordenes.filter(o => o.side === DESITION.BUY).length,
+      ventas: ordenes.filter(o => o.side === DESITION.SELL).length,
+      pnlTotal: ordenes.reduce((sum, o) => sum + o.pnlActual, 0)
+    };
+  });
 
-  public currentPrice = this.realTimePrice.currentPrice ?? 0;
-  public isConnected = this.realTimePrice.isConnected;
-
-  constructor() { }
+  market = this.storeApp.getSignalMarket();
 
   ngOnInit(): void {
     // Conectar al mercado deseado
-    this.realTimePrice.connect(this.marketData.getDataMarket().market);
+    // const market = 'ETHUSDT'; // Ajusta según tu mercado??
+    this.realTimePrice.connect(this.market().market);
+
+    console.log('📊 Inicializando componente de órdenes con precio real-time');
   }
 
   ngOnDestroy(): void {
     this.realTimePrice.disconnect();
   }
-  // Método para formatear números
-  formatNumber(value: number | undefined, decimals: number = 6): string {
-    if (value === undefined || value === null) return '-';
-    return value.toString();
-  }
 
-  // Método para formatear fecha
-  formatTimestamp(timestamp: number): string {
-    return new Date(timestamp).toLocaleTimeString();
-  }
-
-  // Método para calcular P&L
-  calculateCurrentPNL(order: TradingOrder): number {
-    const currentPrice = this.currentPrice();
-
+  // Método CORREGIDO para calcular P&L
+  private calculateCurrentPNL(order: TradingOrder, currentPrice: number | null): number {
     if (!currentPrice) return 0;
 
-    console.log('order: ', order)
+    console.log('📝 Calculando P&L para orden:', {
+      id: order.id,
+      side: order.side,
+      orderPrice: order.price,
+      currentPrice: currentPrice,
+      amount: order.amount,
+      valorPosicion: order.price * order.amount
+    });
+
+    let pnl = 0;
     if (order.side === DESITION.BUY) {
-      console.log('order buy (currentPrice - order.price) * order.amount: ', (currentPrice - order.price) * order.amount)
-      return (currentPrice - order.price) * order.amount;
+      // Para órdenes BUY: (Precio Actual - Precio Entrada) / Precio Entrada * 100
+      const diferenciaPrecio = currentPrice - order.price;
+      pnl = (diferenciaPrecio / order.price) * 100;
+      console.log(`💰 P&L COMPRA: ((${currentPrice} - ${order.price}) / ${order.price}) * 100 = ${pnl.toFixed(2)}%`);
     } else {
-      console.log('order sell (order.price - currentPrice) * order.amount: ', (order.price - currentPrice) * order.amount)
-
-      return (order.price - currentPrice) * order.amount;
+      // Para órdenes SELL: (Precio Entrada - Precio Actual) / Precio Entrada * 100  
+      const diferenciaPrecio = order.price - currentPrice;
+      pnl = (diferenciaPrecio / order.price) * 100;
+      console.log(`💰 P&L VENTA: ((${order.price} - ${currentPrice}) / ${order.price}) * 100 = ${pnl.toFixed(2)}%`);
     }
+
+    return pnl;
   }
 
-  // Método para determinar clase CSS según el side
+  /**
+   * Método para probar el cálculo
+   */
+  runQuickTest(): void {
+    const orders = this.paperTrading.getPaperOrders().open;
+    const currentPrice = this.currentPrice();
+
+    console.log('🧪 TEST - Precio actual:', currentPrice);
+    console.log('🧪 TEST - Órdenes:', orders);
+
+    orders.forEach(order => {
+      const pnl = this.calculateCurrentPNL(order, currentPrice);
+      console.log(`🧪 TEST - Orden ${order.id} P&L: ${pnl}`);
+    });
+  }
+
+  // Tus métodos existentes (mantener sin cambios)
   getSideClass(side: string): string {
-    return side.toLowerCase();
+    return side === DESITION.BUY ? 'side-buy' : 'side-sell';
   }
 
-  // Método para determinar clase CSS según P&L
   getPNLClass(pnl: number): string {
-    if (pnl > 0) return 'profit';
-    if (pnl < 0) return 'loss';
-    return 'neutral';
+    return pnl > 0 ? 'pnl-positive' : pnl < 0 ? 'pnl-negative' : 'pnl-zero';
+  }
+
+  formatNumber(value: number, decimals: number): string {
+    return value.toFixed(decimals);
+  }
+
+  formatTimestamp(timestamp: number): string {
+    return new Date(timestamp).toLocaleTimeString();
   }
 }

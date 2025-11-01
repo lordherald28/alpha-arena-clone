@@ -28,6 +28,10 @@ export class StoreAppService {
     return this.marketDataConfig();
   }
 
+  getSignalMarket() {
+    return this.marketDataConfig;
+  }
+  
   /**
    * 
    */

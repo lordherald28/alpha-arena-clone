@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradingLogicService } from '../../../../core/services/trading-logic.service';
 import { TradingExecutionService } from '../../../../core/services/trading-execution.service';
+import { DESITION } from '../../../../core/utils/const.utils';
 
 
 @Component({
@@ -29,10 +30,10 @@ export class TradingControlComponent {
   }
 
   buy(): void {
-    this.tradingLogic.placeManualOrder('buy', '0.001');
+    this.tradingLogic.placeManualOrder(DESITION.BUY, '0.001');
   }
 
   sell(): void {
-    this.tradingLogic.placeManualOrder('sell', '0.001');
+    this.tradingLogic.placeManualOrder(DESITION.SELL, '0.001');
   }
 }

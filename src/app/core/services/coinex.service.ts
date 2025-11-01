@@ -18,9 +18,10 @@ export class CoinexService implements ITradingService {
   readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
 
   // ✅ Reemplazar por computed signal
-  private marketData = computed(() => this.storeAppService.getDataMarket());
-
+  
   private readonly storeAppService = inject(StoreAppService)
+  private marketData = computed(() => this.storeAppService.getDataMarket());
+  
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
     '1h', '2h', '4h', '6h', '12h',

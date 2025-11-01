@@ -1,6 +1,6 @@
 // services/coin-ex-gzip.service.ts
-import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
+import { Observable, single, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -9,6 +9,8 @@ export class CoinExGzipService {
   private ws: WebSocket | null = null;
   private messageSubject = new Subject<any>();
   public messages$ = this.messageSubject.asObservable();
+
+  private _id = signal<number>(0);
 
   constructor() { }
 
@@ -34,24 +36,26 @@ export class CoinExGzipService {
         id: Date.now()
       };
 
-      console.log('📤 Enviando suscripción:', message);
+      this._id.set(message.id);
+
+      // console.log('📤 Enviando suscripción:', message);
       this.ws!.send(JSON.stringify(message));
     };
 
     this.ws.onmessage = async (event) => {
-      console.log('📨 Datos recibidos - Tipo:', typeof event.data);
+      // console.log('📨 Datos recibidos - Tipo:', typeof event.data);
 
       if (event.data instanceof Blob) {
-        console.log('📦 Blob GZIP recibido, tamaño:', event.data.size);
+        // console.log('📦 Blob GZIP recibido, tamaño:', event.data.size);
 
         try {
           // Descomprimir el GZIP
           const decompressedData = await this.decompressGzip(event.data);
-          console.log('✅ Datos descomprimidos:', decompressedData);
+          // console.log('✅ Datos descomprimidos:', decompressedData);
 
           // Parsear el JSON
           const parsedData = JSON.parse(decompressedData);
-          console.log('🎯 JSON Parseado:', parsedData);
+          // console.log('🎯 JSON Parseado:', parsedData);
 
           this.messageSubject.next(parsedData);
 
@@ -98,6 +102,18 @@ export class CoinExGzipService {
       this.ws = null;
       console.log('🔌 WebSocket desconectado');
     }
+  }
+
+  unsubscribe(): void {
+    const message = {
+      method: 'state.unsubscribe',
+      params: { "market_list": [] },
+      id: this._id()
+    };
+
+    // console.log('📤 Enviando suscripción:', message);
+    this.ws!.send(JSON.stringify(message));
+    console.log('🔌 WebSocket unsubscribe');
   }
 
   getMessages(): Observable<any> {

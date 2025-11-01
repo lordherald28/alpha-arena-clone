@@ -215,3 +215,63 @@
         gap: 12px;
     }
 }
+
+/* orden-list.component.scss */
+.ordenes-container {
+    padding: 1rem;
+
+    .table-title {
+        color: #333;
+        margin-bottom: 1rem;
+    }
+
+    .btn-test {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 1rem;
+
+        &:hover {
+            background: #0056b3;
+        }
+    }
+}
+
+.pnl-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: bold;
+
+    &.pnl-positive {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    &.pnl-negative {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    &.pnl-zero {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+
+    &.open {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    &.closed {
+        background: #d4edda;
+        color: #155724;
+    }
+}

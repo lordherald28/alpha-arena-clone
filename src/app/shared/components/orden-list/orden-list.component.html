@@ -39,8 +39,8 @@
               ${{ formatNumber(orden.pnlActual, 2) }}
             </span>
           </td>
-          <td class="tp-cell">${{ formatNumber(orden.tp, 2) }}</td>
-          <td class="sl-cell">${{ formatNumber(orden.sl, 2) }}</td>
+          <td class="tp-cell">${{ formatNumber(orden!.tp!, 2) }}</td>
+          <td class="sl-cell">${{ formatNumber(orden.sl!, 2) }}</td>
           <td class="time-cell">{{ formatTimestamp(orden.timestamp) }}</td>
           <td class="status-cell">
             <span [class]="'status-badge ' + orden.status">

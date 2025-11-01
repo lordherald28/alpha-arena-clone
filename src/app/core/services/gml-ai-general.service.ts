@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, WritableSignal } from "@angular/core";
+import { computed, effect, inject, Injectable, signal, WritableSignal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 
 import { AiResponse, Balance, Candlestick, TypeMarket } from "../models";
@@ -25,12 +25,17 @@ export class GlmAiGeneralService {
     readonly currentMarketData = signal<any>(null);
     readonly marketConfig = computed(() => this.StoreService.getDataMarket());
 
+    readonly positionOpens = this.paperTrading.openOrders;
+
     private StoreService = inject(StoreAppService);
 
     constructor() {
         this.paperTrading.getAccountBalance().subscribe((balance: Balance[]) => {
             this.accountBalance.set(+balance[0].available)
         });
+        effect(() => {
+            console.log('openPositions: ', this.positionOpens().length);
+        })
         // this.marketConfig.set(this.StoreService.getDataMarket());
     }
 
@@ -162,7 +167,7 @@ export class GlmAiGeneralService {
 
             // ✅ GESTIÓN DE RIESGO
             const accountBalance = this.accountBalance();
-            const openPositions = this.paperTrading.getOpenOrdersNumber(this.marketConfig().market);
+            const openPositions = this.positionOpens().length;/* this.paperTrading.getOpenOrdersNumber(this.marketConfig().market); */
 
             // Actualizar señales
             this.currentAtr.set(lastAtr14);

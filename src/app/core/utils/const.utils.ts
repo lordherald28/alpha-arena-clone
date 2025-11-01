@@ -1,4 +1,4 @@
-export const MINCONFIDENCE: number = 0.7;
+export const MINCONFIDENCE: number = 0.65;
 export const MAX_ORDEN_OPEN: number = 3;
 export enum DESITION {
     BUY = 'BUY',

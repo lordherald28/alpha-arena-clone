@@ -21,7 +21,7 @@ export const environment = {
     },
     paperTrading: {
         enabled: true,
-        initialBalance: 10,
+        initialBalance: 5000,
         fee: 0.001,
         defaultRisk: 0.02
     },

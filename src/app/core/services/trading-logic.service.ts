@@ -8,17 +8,18 @@ import { Candlestick, AiResponse, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { ITradingService } from '../base/trading-service.interface';
 import { PaperTradingService } from './paper-trading.service';
+import { RealTimePriceService } from './real-time-price.service';
 import { StoreAppService } from '../store/store-app.service';
-import { CoinExGzipService } from './coinex-gzip.service'; // ✅ Importar el servicio que funciona
 
 @Injectable({
   providedIn: 'root'
 })
 export class TradingLogicService {
+
   //Inject 
-  // private marketData = inject(MarketDataService);
-  private paperTrading = inject(PaperTradingService);
-  // private glmAi = inject(GlmAiService);
+  private readonly paperTrading = inject(PaperTradingService);
+  private readonly realTImeService = inject(RealTimePriceService);
+  private readonly storeApp = inject(StoreAppService);
 
   // Signals para el estado reactivo (MANTENER lo que ya funciona)
   public candles = signal<Candlestick[]>([]);
@@ -39,6 +40,9 @@ export class TradingLogicService {
 
   private analysisSubscription: Subscription | null = null;
 
+  market = this.storeApp.getSignalMarket();
+  currentPrice = this.realTImeService.currentPrice;
+
   constructor(
     @Inject('ITradingService')
     private coinexService: ITradingService,
@@ -53,7 +57,8 @@ export class TradingLogicService {
     if (this.isRunning()) return;
 
     this.isRunning.set(true);
-    console.log('🧠 Iniciando análisis de mercado...');
+    console.log('🧠 Iniciando análisis de mercado...', this.realTImeService.isConnected() );
+    // this.realTImeService.isConnected() === false && this.realTImeService.connect(this.market().market);
 
     // Ejecutar análisis inmediatamente y luego cada intervalo
     this.runAnalysisCycle(/* market */);
@@ -85,8 +90,8 @@ export class TradingLogicService {
       this.lastUpdate.set(new Date());
 
       // ✅ OBTENER PRECIO ACTUAL CORRECTAMENTE
-      const currentPrice = candles[candles.length - 1].close;
-      console.log(`💰 Precio actual: ${currentPrice}`);
+      // const currentPrice = candles[candles.length - 1].close;
+      console.log(`💰 Precio actual: ${this.currentPrice()}`);
 
       // 1. Primero verificar y cerrar órdenes existentes
       // this.paperTrading.checkOrders(currentPrice);
@@ -97,7 +102,7 @@ export class TradingLogicService {
         // console.log('🧠 Decisión de IA:', aiResponse);
 
         // ✅ ENVIAR DECISIÓN CON PRECIO ACTUAL
-        this.paperTrading.processAIDecision(aiResponse, currentPrice);
+        this.paperTrading.processAIDecision(aiResponse, this.currentPrice());
       });
     });
   }
@@ -135,6 +140,8 @@ export class TradingLogicService {
       this.analysisSubscription.unsubscribe();
       this.analysisSubscription = null;
     }
+    // this.realTImeService.unsubscribe();
+    // this
     console.log('Análisis de trading detenido.');
   }
 
@@ -175,6 +182,7 @@ export class TradingLogicService {
 
   public stopTrading(): void {
     this.tradingStatus.update(status => ({ ...status, active: false }));
+    // this.realTImeService.disconnect();
     console.log('🛑 Trading automático DETENIDO');
   }
 
