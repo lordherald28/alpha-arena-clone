@@ -27,9 +27,7 @@ export class CoinexService implements ITradingService {
     '1day', '3day', '1week', '1month'
   ];
 
-  constructor(private http: HttpClient) {
-
-  }
+  constructor(private http: HttpClient) { }
 
   getAccountBalance(): Observable<Balance[]> {
     return of([]);

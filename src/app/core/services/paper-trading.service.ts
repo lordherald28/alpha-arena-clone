@@ -20,7 +20,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     BTC: 0,
     totalUSDT: environment.paperTrading.initialBalance,
     currency: '',
-    available: 0,
+    available: environment.paperTrading.initialBalance,
     frozen: 0
   });
 
@@ -51,6 +51,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     // console.log('📊 Paper Trading iniciado con balance:', this.balance());
     this.setupAutoOrderMonitoring();
     this.startPriceMonitoring();
+    console.log('Datos del usuario: ', this.balance())
   }
   readonly currentPriceMarketSymbol = signal<number>(0);
 
@@ -71,11 +72,6 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     });
     this.$currentAtr.set(atr14[atr14.length - 1]);
   }
-
-  // setMaketData(marketData: TypeMarket): void {
-  //   console.log('Actualizado: ', this.marketData());
-  //   this.marketData.set(marketData)
-  // }
 
   private setupAutoOrderMonitoring(): void {
     effect(() => {

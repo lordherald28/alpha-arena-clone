@@ -10,6 +10,7 @@ import { PaperTradingDashboardComponent } from './components/paper-trading-dashb
 import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
 import { TypeMarket } from '../../core/models';
 import { StoreAppService } from '../../core/store/store-app.service';
+import { PaperTradingService } from '../../core/services/paper-trading.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -35,6 +36,8 @@ export class DashboardComponent implements OnInit {
   public lastUpdate;
   private readonly storeServiceMarket = inject(StoreAppService);
 
+  public readonly currentPriceSymbol = inject(PaperTradingService).currentPriceMarketSymbol();
+
   constructor(private tradingLogic: TradingLogicService) {
     this.candles = this.tradingLogic.candles;
     this.aiResponse = this.tradingLogic.aiResponse;
@@ -51,7 +54,7 @@ export class DashboardComponent implements OnInit {
   }
 
   public startAnalysis(/* market: TypeMarket */): void {
-    console.log('configuracion: ', this.storeServiceMarket.getDataMarket())
+    // console.log('configuracion: ', this.storeServiceMarket.getDataMarket())
     this.tradingLogic.startAnalysis(/* market */);
   }
 

@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, WritableSignal } from "@angular/core";
+import { computed, inject, Injectable, signal, WritableSignal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 
 import { AiResponse, Balance, Candlestick, TypeMarket } from "../models";
@@ -23,11 +23,7 @@ export class GlmAiGeneralService {
 
     readonly currentAtr = signal<number>(0);
     readonly currentMarketData = signal<any>(null);
-    readonly marketConfig = signal<TypeMarket>({
-        market: "",
-        interval: "",
-        limit: 0
-    });
+    readonly marketConfig = computed(() => this.StoreService.getDataMarket());
 
     private StoreService = inject(StoreAppService);
 
@@ -35,11 +31,24 @@ export class GlmAiGeneralService {
         this.paperTrading.getAccountBalance().subscribe((balance: Balance[]) => {
             this.accountBalance.set(+balance[0].available)
         });
-        this.marketConfig.set(this.StoreService.getDataMarket());
+        // this.marketConfig.set(this.StoreService.getDataMarket());
     }
 
     analyzeMarket(candles: Candlestick[]): Observable<AiResponse> {
         const prompt = this.buildPrompt(candles);
+
+        // Si hay error en los cálculos, retornar HOLD inmediatamente
+        if (prompt.includes('Error calculando indicadores')) {
+            return new Observable(observer => {
+                observer.next({
+                    decision: 'HOLD',
+                    confidence: 0,
+                    reason: 'Error en cálculos técnicos - mercado no analizable',
+                    rawJson: {}
+                });
+                observer.complete();
+            });
+        }
 
         const body = {
             model: 'glm-4.6',
@@ -93,50 +102,58 @@ export class GlmAiGeneralService {
         const volumes = candles.map(c => c.volume);
 
         try {
-            // ✅ CÁLCULOS DE INDICADORES PRINCIPALES
-            const rsi7 = this.calculateRSI(closes, 7);
-            const rsi14 = this.calculateRSI(closes, 14);
-            const ema20 = this.calculateEMA(closes, 20);
-            const ema50 = this.calculateEMA(closes, 50);
-            const ema200 = this.calculateEMA(closes, 200);
+            // ✅ VALORES ACTUALES CON VALIDACIÓN
+            const lastCandle = candles[candles.length - 1];
+            const lastClose = lastCandle.close;
+            const lastVolume = lastCandle.volume;
 
-            const atr14 = this.calculateATR(highs, lows, closes, 14);
-            const macd = this.calculateMACD(closes);
-            const stoch = this.calculateStochastic(highs, lows, closes, 14, 3);
-            const cci = this.calculateCCI(highs, lows, closes, 20);
-            const adx = this.calculateADX(highs, lows, closes, 14);
-            const bb = this.calculateBollingerBands(closes, 20, 2);
+            // ✅ CÁLCULOS DE INDICADORES PRINCIPALES CON MANEJO DE ERRORES
+            const rsi7 = this.safeCalculate(() => this.calculateRSI(closes, 7), [50]);
+            const rsi14 = this.safeCalculate(() => this.calculateRSI(closes, 14), [50]);
+            const ema20 = this.safeCalculate(() => this.calculateEMA(closes, 20), [lastClose]);
+            const ema50 = this.safeCalculate(() => this.calculateEMA(closes, 50), [lastClose]);
+            const ema200 = this.safeCalculate(() => this.calculateEMA(closes, 200), [lastClose]);
+
+            const atr14 = this.safeCalculate(() => this.calculateATR(highs, lows, closes, 14), [0]);
+            const macd = this.safeCalculate(() => this.calculateMACD(closes), [{}]);
+            const stoch = this.safeCalculate(() => this.calculateStochastic(highs, lows, closes, 14, 3), [{}]);
+            const cci = this.safeCalculate(() => this.calculateCCI(highs, lows, closes, 20), [0]);
+            const adx = this.safeCalculate(() => this.calculateADX(highs, lows, closes, 14), [{}]);
+
+            // ✅ CÁLCULO DE BOLLINGER BANDS CON VALIDACIÓN ROBUSTA
+            const bb = this.safeCalculate(() => this.calculateBollingerBands(closes, 20, 2), {
+                upper: [lastClose * 1.1],
+                middle: [lastClose],
+                lower: [lastClose * 0.9]
+            });
 
             // ✅ CÁLCULOS DE VOLUMEN Y ESTRUCTURA DE MERCADO
             const volumeProfile = this.calculateVolumeProfile(volumes);
             const marketStructure = this.calculateMarketStructure(highs, lows, closes);
             const pivotPoints = this.calculatePivotPoints(highs, lows, closes);
 
-            // ✅ VALORES ACTUALES
-            const lastCandle = candles[candles.length - 1];
-            const lastClose = lastCandle.close;
-            const lastVolume = lastCandle.volume;
+            // ✅ VALORES DE INDICADORES CON VALIDACIÓN DE LENGTH
+            const lastRsi7 = this.getLastValue(rsi7, 50);
+            const lastRsi14 = this.getLastValue(rsi14, 50);
 
-            // ✅ VALORES DE INDICADORES
-            const lastRsi7 = rsi7[rsi7.length - 1];
-            const lastRsi14 = rsi14[rsi14.length - 1];
+            const lastEma20 = this.getLastValue(ema20, lastClose);
+            const lastEma50 = this.getLastValue(ema50, lastClose);
+            const lastEma200 = this.getLastValue(ema200, lastClose);
 
-            const lastEma20 = ema20[ema20.length - 1];
-            const lastEma50 = ema50[ema50.length - 1];
-            const lastEma200 = ema200[ema200.length - 1];
+            const lastAtr14 = this.getLastValue(atr14, 0);
+            const lastMacd = this.getLastValue(macd, {});
+            const lastStochK = stoch && stoch.length > 0 ? (stoch[stoch.length - 1]?.k || 50) : 50;
 
-            const lastAtr14 = atr14[atr14.length - 1];
-            const lastMacd = macd[macd.length - 1];
-            const lastStochK = stoch[stoch.length - 1]?.k;
-            const lastWilliamsR = this.calculateWilliamsR(highs, lows, closes, 14);
-            const lastCci = cci[cci.length - 1];
-            const lastAdx = adx[adx.length - 1]?.adx;
+            const lastWilliamsR = this.safeCalculate(() => this.calculateWilliamsR(highs, lows, closes, 14), 0);
+            const lastCci = this.getLastValue(cci, 0);
+            const lastAdx = adx && adx.length > 0 ? (adx[adx.length - 1]?.adx || 0) : 0;
 
-            const lastBbUpper = bb.upper[bb.upper.length - 1];
-            const lastBbMiddle = bb.middle[bb.middle.length - 1];
-            const lastBbLower = bb.lower[bb.lower.length - 1];
+            // ✅ VALORES DE BOLLINGER BANDS CON VALIDACIÓN ROBUSTA
+            const lastBbUpper = bb && bb.upper && bb.upper.length > 0 ? bb.upper[bb.upper.length - 1] : lastClose * 1.1;
+            const lastBbMiddle = bb && bb.middle && bb.middle.length > 0 ? bb.middle[bb.middle.length - 1] : lastClose;
+            const lastBbLower = bb && bb.lower && bb.lower.length > 0 ? bb.lower[bb.lower.length - 1] : lastClose * 0.9;
 
-            // ✅ ESTADOS DERIVADOS GENERALES (No sesgados a estrategia específica)
+            // ✅ ESTADOS DERIVADOS GENERALES CON VALIDACIÓN
             const trendAlignment = this.calculateTrendAlignment(lastEma20, lastEma50, lastEma200, lastClose);
             const momentumState = this.calculateMomentumState(lastRsi14, lastStochK, lastCci, lastWilliamsR);
             const volatilityState = this.calculateVolatilityState(lastAtr14, lastClose, lastBbUpper, lastBbLower);
@@ -145,7 +162,6 @@ export class GlmAiGeneralService {
 
             // ✅ GESTIÓN DE RIESGO
             const accountBalance = this.accountBalance();
-            // const availableMargin = this.paperTrading.getAvailableMargin();
             const openPositions = this.paperTrading.getOpenOrdersNumber(this.marketConfig().market);
 
             // Actualizar señales
@@ -164,7 +180,7 @@ export class GlmAiGeneralService {
                 lastClose,
                 lastVolume,
                 accountBalance,
-                // availableMargin,
+                availableMargin: accountBalance * 0.8, // Estimación
 
                 // Indicadores de tendencia
                 lastEma20,
@@ -209,7 +225,36 @@ export class GlmAiGeneralService {
         }
     }
 
-    // ✅ MÉTODOS DE CÁLCULO DE ESTADOS DERIVADOS GENERALES
+    // ✅ MÉTODOS DE SEGURIDAD PARA CÁLCULOS
+    private safeCalculate<T>(calculation: () => T, defaultValue: T): T {
+        try {
+            const result = calculation();
+            if (result === undefined || result === null) {
+                console.warn('Cálculo retornó undefined/null, usando valor por defecto');
+                return defaultValue;
+            }
+
+            // Validar arrays vacíos
+            if (Array.isArray(result) && result.length === 0) {
+                console.warn('Array de cálculo vacío, usando valor por defecto');
+                return defaultValue;
+            }
+
+            return result;
+        } catch (error) {
+            console.warn('Error en cálculo, usando valor por defecto:', error);
+            return defaultValue;
+        }
+    }
+
+    private getLastValue<T>(array: T[] | undefined, defaultValue: T): T {
+        if (!array || array.length === 0) {
+            return defaultValue;
+        }
+        return array[array.length - 1];
+    }
+
+    // ✅ MÉTODOS DE CÁLCULO DE ESTADOS DERIVADOS GENERALES (se mantienen igual)
     private calculateTrendAlignment(ema20: number, ema50: number, ema200: number, price: number): any {
         const trends = {
             shortTerm: price > ema20 ? 'BULLISH' : 'BEARISH',
@@ -262,8 +307,11 @@ export class GlmAiGeneralService {
     }
 
     private calculatePricePosition(price: number, marketStructure: any): any {
-        const nearestSupport = Math.max(...marketStructure.supportLevels.filter((s: any) => s < price));
-        const nearestResistance = Math.min(...marketStructure.resistanceLevels.filter((r: any) => r > price));
+        const validSupports = marketStructure.supportLevels.filter((s: number) => s < price);
+        const validResistances = marketStructure.resistanceLevels.filter((r: number) => r > price);
+
+        const nearestSupport = validSupports.length > 0 ? Math.max(...validSupports) : price * 0.95;
+        const nearestResistance = validResistances.length > 0 ? Math.min(...validResistances) : price * 1.05;
 
         const supportDistance = ((price - nearestSupport) / price) * 100;
         const resistanceDistance = ((nearestResistance - price) / price) * 100;
@@ -277,7 +325,7 @@ export class GlmAiGeneralService {
         };
     }
 
-    // ✅ MÉTODOS AUXILIARES PARA ESTADOS DERIVADOS
+    // ✅ MÉTODOS AUXILIARES PARA ESTADOS DERIVADOS (se mantienen igual)
     private getTrendDescription(score: number): string {
         switch (score) {
             case 3: return 'FUERTE_TENDENCIA_ALCISTA';
@@ -370,14 +418,13 @@ export class GlmAiGeneralService {
 
     private getPositionInRange(supportDist: number, resistanceDist: number): string {
         const totalRange = supportDist + resistanceDist;
-        const position = (supportDist / totalRange) * 100;
+        if (totalRange === 0) return 'MEDIO_RANGO'; // Evitar división por cero
 
+        const position = (supportDist / totalRange) * 100;
         if (position < 30) return 'CERCA_SOPORTE';
         if (position > 70) return 'CERCA_RESISTENCIA';
         return 'MEDIO_RANGO';
     }
-
-    // ... (los métodos de cálculo de indicadores técnicos se mantienen igual que antes)
 
     // ✅ MÉTODOS DE CÁLCULO DE INDICADORES TÉCNICOS (se mantienen igual)
     private calculateRSI(closes: number[], period: number): number[] {
@@ -446,6 +493,9 @@ export class GlmAiGeneralService {
 
         const highestHigh = Math.max(...recentHighs);
         const lowestLow = Math.min(...recentLows);
+
+        // Evitar división por cero
+        if (highestHigh === lowestLow) return 0;
 
         return ((highestHigh - currentClose) / (highestHigh - lowestLow)) * -100;
     }
@@ -554,7 +604,7 @@ You are an advanced AI trading system specialized in multi-strategy cryptocurren
 
 - Momentum Oscillators:
   • RSI 14: ${lastRsi14.toFixed(2)} | Stochastic %K: ${lastStochK ? lastStochK.toFixed(2) : 'N/A'}
-  • RSI 7: ${lastRsi7.toFixed(2)} | Stochastic %K: ${lastStochK ? lastStochK.toFixed(2) : 'N/A'}
+  • RSI 7: ${lastRsi7.toFixed(2)} 
   • Williams %R: ${lastWilliamsR.toFixed(2)} | CCI: ${lastCci.toFixed(2)}
 
 - Volatility & Volume:
@@ -602,7 +652,7 @@ You are an advanced AI trading system specialized in multi-strategy cryptocurren
 - Base Risk: ${riskPerTrade.toFixed(2)} USDT (2%)
 - Volatility Adjusted: ${volatilityAdjustedSize.toFixed(2)} USDT
 - Maximum Positions: 3 (Current: ${openPositions})
-- Minimum Balance: 20 USDT ✅
+- Minimum Balance: 20 USDT ${accountBalance > 20 ? '✅' : '❌'}
 
 **STRATEGY CONSIDERATIONS:**
 Based on the objective analysis above, evaluate which strategy fits best:
