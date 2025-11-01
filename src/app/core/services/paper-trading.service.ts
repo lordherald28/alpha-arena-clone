@@ -10,6 +10,7 @@ import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eSTATUS, MAX_ORDEN_OPEN
 import { ATR } from 'technicalindicators';
 import { StoreAppService } from '../store/store-app.service';
 
+import { RealTimePriceService } from './real-time-price.service';
 @Injectable({
   providedIn: 'root'
 })
@@ -44,6 +45,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
 
   // inject
   private readonly storeAppService = inject(StoreAppService);
+  private readonly realTimePriceService = inject(RealTimePriceService);
 
   constructor(
     private readonly serviceCoinex: CoinexService,
@@ -54,7 +56,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     this.currentPriceMarketSymbol = this.serviceCoinex.currentPriceMarketSymbol;
     console.log('Datos del usuario: ', this.balance())
   }
-  readonly currentPriceMarketSymbol = signal<number>(0);
+  readonly currentPriceMarketSymbol = this.realTimePriceService.currentPrice;
 
   ngOnDestroy(): void {
     this.$subs.unsubscribe();
@@ -77,6 +79,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private setupAutoOrderMonitoring(): void {
     effect(() => {
       const currentPrice = this.currentPriceMarketSymbol();
+      console.log('precio real de real time ws: ', currentPrice);
+      
       const openOrders = this.openOrders();
 
       if (currentPrice > 0 && openOrders.length > 0) {

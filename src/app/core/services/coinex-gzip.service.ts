@@ -1,3 +1,4 @@
+// services/coin-ex-gzip.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 
@@ -76,16 +77,12 @@ export class CoinExGzipService {
    */
   private async decompressGzip(blob: Blob): Promise<string> {
     try {
-      // Convertir Blob a ArrayBuffer
       const arrayBuffer = await blob.arrayBuffer();
-
-      // Crear un stream de descompresión GZIP
       const decompressionStream = new DecompressionStream('gzip');
       const decompressedStream = new Response(
         new Blob([arrayBuffer]).stream().pipeThrough(decompressionStream)
       );
 
-      // Convertir a texto
       const decompressedArrayBuffer = await decompressedStream.arrayBuffer();
       return new TextDecoder().decode(decompressedArrayBuffer);
 

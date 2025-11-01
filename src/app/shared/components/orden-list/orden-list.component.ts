@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, computed, Signal, input, output, signal } from '@angular/core';
+import { Component, inject, OnInit, computed, Signal, input, output, signal, OnDestroy } from '@angular/core';
 import { TradingOrder } from '../../../core/models';
 import { PaperTradingService } from '../../../core/services/paper-trading.service';
 import { StoreAppService } from '../../../core/store/store-app.service';
 import { DESITION } from '../../../core/utils/const.utils';
+import { RealTimePriceService } from '../../../core/services/real-time-price.service';
 
 @Component({
   selector: 'app-orden-list',
@@ -12,10 +13,7 @@ import { DESITION } from '../../../core/utils/const.utils';
   templateUrl: './orden-list.component.html',
   styleUrls: ['./orden-list.component.scss']
 })
-export class OrdenListComponent implements OnInit {
-
-  // ✅ CORRECTO: Input Signal para precio actual
-  // currentPrice = signal<number>(0);
+export class OrdenListComponent implements OnInit, OnDestroy {
 
   entradaDesdePadre = input<number>(2);
 
@@ -29,6 +27,8 @@ export class OrdenListComponent implements OnInit {
 
   // ✅ INYECTAR servicio
   private paperTrading = inject(PaperTradingService);
+  private realTimePrice = inject(RealTimePriceService);
+  private marketData = inject(StoreAppService);
 
   // ✅ SEÑAL COMPUTADA: Órdenes abiertas del servicio
   ordenesSignal: Signal<TradingOrder[]> = computed(() => {
@@ -47,26 +47,28 @@ export class OrdenListComponent implements OnInit {
 
   // ✅ SEÑAL COMPUTADA: Órdenes con P&L calculado
   ordenesConPNL = computed(() => {
-    const currentPrice = this.currentPrice();
     console.log('ordenes signal: ', this.ordenesSignal())
     return this.ordenesSignal().map(orden => ({
       ...orden,
-      pnlActual: this.calculateCurrentPNL(orden, currentPrice)
+      pnlActual: this.calculateCurrentPNL(orden)
     }));
   });
 
-
   // SEÑAÑ COMPUTADA: Precio actual
-  currentPrice = computed(() => this.paperTrading.currentPriceMarketSymbol())
-  constructor() {
+
+  public currentPrice = this.realTimePrice.currentPrice ?? 0;
+  public isConnected = this.realTimePrice.isConnected;
+
+  constructor() { }
+
+  ngOnInit(): void {
+    // Conectar al mercado deseado
+    this.realTimePrice.connect(this.marketData.getDataMarket().market);
   }
 
-  ngOnInit() {
-    // ❌ NO necesitas asignar manualmente con Signals
-    // La reactividad es automática
-
+  ngOnDestroy(): void {
+    this.realTimePrice.disconnect();
   }
-
   // Método para formatear números
   formatNumber(value: number | undefined, decimals: number = 6): string {
     if (value === undefined || value === null) return '-';
@@ -79,7 +81,9 @@ export class OrdenListComponent implements OnInit {
   }
 
   // Método para calcular P&L
-  calculateCurrentPNL(order: TradingOrder, currentPrice: number): number {
+  calculateCurrentPNL(order: TradingOrder): number {
+    const currentPrice = this.currentPrice();
+
     if (!currentPrice) return 0;
 
     console.log('order: ', order)
