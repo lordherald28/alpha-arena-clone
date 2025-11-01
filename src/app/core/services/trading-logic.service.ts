@@ -8,6 +8,8 @@ import { Candlestick, AiResponse, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { ITradingService } from '../base/trading-service.interface';
 import { PaperTradingService } from './paper-trading.service';
+import { StoreAppService } from '../store/store-app.service';
+import { CoinExGzipService } from './coinex-gzip.service'; // ✅ Importar el servicio que funciona
 
 @Injectable({
   providedIn: 'root'

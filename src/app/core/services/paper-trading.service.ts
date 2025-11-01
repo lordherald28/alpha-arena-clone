@@ -51,6 +51,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     // console.log('📊 Paper Trading iniciado con balance:', this.balance());
     this.setupAutoOrderMonitoring();
     this.startPriceMonitoring();
+    this.currentPriceMarketSymbol = this.serviceCoinex.currentPriceMarketSymbol;
     console.log('Datos del usuario: ', this.balance())
   }
   readonly currentPriceMarketSymbol = signal<number>(0);
@@ -340,6 +341,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
    */
   getOpenOrders(market: string): Observable<any[]> {
     const orders = this.openOrders().filter(order => order.market === market);
+    console.log('getOpenOrders: ', orders)
     return of(orders.map(order => ({
       order_id: order.id,
       market: order.market,

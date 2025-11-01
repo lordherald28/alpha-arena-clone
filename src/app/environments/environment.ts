@@ -4,6 +4,7 @@ export const environment = {
         apiKey: '',
         apiSecret: '',
         baseUrl: 'https://api.coinex.com/v2',
+        wsUrl:'wss://socket.coinex.com/v2/futures',
         demoAmount: '0.001'
     },
     coinw: {

@@ -3,6 +3,13 @@
     height: 100%;
 }
 
-.tv-lightweight-charts{
+.tv-lightweight-charts {
     width: 100% !important;
+}
+
+.status-panel {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    flex-flow: row nowrap;
 }

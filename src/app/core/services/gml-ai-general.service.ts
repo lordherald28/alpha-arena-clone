@@ -652,7 +652,7 @@ You are an advanced AI trading system specialized in multi-strategy cryptocurren
 - Base Risk: ${riskPerTrade.toFixed(2)} USDT (2%)
 - Volatility Adjusted: ${volatilityAdjustedSize.toFixed(2)} USDT
 - Maximum Positions: 3 (Current: ${openPositions})
-- Minimum Balance: 20 USDT ${accountBalance > 20 ? '✅' : '❌'}
+- Minimum Balance: 5 USDT ${accountBalance > 5 ? '✅' : '❌'}
 
 **STRATEGY CONSIDERATIONS:**
 Based on the objective analysis above, evaluate which strategy fits best:

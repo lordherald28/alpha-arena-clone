@@ -1,19 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, computed, Signal, input, output } from '@angular/core';
+import { Component, inject, OnInit, computed, Signal, input, output, signal } from '@angular/core';
 import { TradingOrder } from '../../../core/models';
 import { PaperTradingService } from '../../../core/services/paper-trading.service';
+import { StoreAppService } from '../../../core/store/store-app.service';
+import { DESITION } from '../../../core/utils/const.utils';
 
 @Component({
   selector: 'app-orden-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule,],
   templateUrl: './orden-list.component.html',
   styleUrls: ['./orden-list.component.scss']
 })
 export class OrdenListComponent implements OnInit {
 
   // ✅ CORRECTO: Input Signal para precio actual
-  currentPrice = input<number>(0);
+  // currentPrice = signal<number>(0);
 
   entradaDesdePadre = input<number>(2);
 
@@ -46,23 +48,29 @@ export class OrdenListComponent implements OnInit {
   // ✅ SEÑAL COMPUTADA: Órdenes con P&L calculado
   ordenesConPNL = computed(() => {
     const currentPrice = this.currentPrice();
+    console.log('ordenes signal: ', this.ordenesSignal())
     return this.ordenesSignal().map(orden => ({
       ...orden,
       pnlActual: this.calculateCurrentPNL(orden, currentPrice)
     }));
   });
 
-  constructor() { }
+
+  // SEÑAÑ COMPUTADA: Precio actual
+  currentPrice = computed(() => this.paperTrading.currentPriceMarketSymbol())
+  constructor() {
+  }
 
   ngOnInit() {
     // ❌ NO necesitas asignar manualmente con Signals
     // La reactividad es automática
+
   }
 
   // Método para formatear números
   formatNumber(value: number | undefined, decimals: number = 6): string {
     if (value === undefined || value === null) return '-';
-    return value.toFixed(decimals);
+    return value.toString();
   }
 
   // Método para formatear fecha
@@ -74,9 +82,13 @@ export class OrdenListComponent implements OnInit {
   calculateCurrentPNL(order: TradingOrder, currentPrice: number): number {
     if (!currentPrice) return 0;
 
-    if (order.side === 'BUY') {
+    console.log('order: ', order)
+    if (order.side === DESITION.BUY) {
+      console.log('order buy (currentPrice - order.price) * order.amount: ', (currentPrice - order.price) * order.amount)
       return (currentPrice - order.price) * order.amount;
     } else {
+      console.log('order sell (order.price - currentPrice) * order.amount: ', (order.price - currentPrice) * order.amount)
+
       return (order.price - currentPrice) * order.amount;
     }
   }

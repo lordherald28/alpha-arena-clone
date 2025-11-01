@@ -20,8 +20,7 @@
 
     <aside class="side-panels">
       <app-paper-trading-dashboard></app-paper-trading-dashboard>
-      <app-orden-list [currentPrice]="currentPriceSymbol" [entradaDesdePadre]="25"
-        (emitirMensaje)="reciboDelHijo($event)"></app-orden-list>
+      <app-orden-list [entradaDesdePadre]="25" (emitirMensaje)="reciboDelHijo($event)"></app-orden-list>
       <app-ai-response-panel [aiResponse]="aiResponse()"></app-ai-response-panel>
     </aside>
   </div>

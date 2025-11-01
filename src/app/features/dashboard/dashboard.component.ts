@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output } from '@angular/core';
+import { Component, inject, OnInit, output, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradingLogicService } from '../../core/services/trading-logic.service';
 import { ControlPanelComponent } from './components/control-panel/control-panel.component';
@@ -45,12 +45,14 @@ export class DashboardComponent implements OnInit {
     this.lastUpdate = this.tradingLogic.lastUpdate;
   }
 
+
   eventoHijo = output<number>();
 
   ngOnInit(): void {
-    // actualizar el evento que viene del hijo
-    this.eventoHijo.subscribe(console.log)
-    // Opcional: cargar datos iniciales al arrancar
+
+    // Conectar al mercado deseado
+
+
   }
 
   public startAnalysis(/* market: TypeMarket */): void {
