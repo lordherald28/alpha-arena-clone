@@ -4,6 +4,7 @@ import { Component, OnInit, Signal, signal, output, inject } from '@angular/core
 import { TypeMarket } from '../../../core/models';
 import { PaperTradingService } from '../../../core/services/paper-trading.service';
 import { CoinexService } from '../../../core/services/coinex.service';
+import { StoreAppService } from '../../../core/store/store-app.service';
 
 type TimeFrame = { label: string, value: string };
 
@@ -16,11 +17,6 @@ type TimeFrame = { label: string, value: string };
 })
 export class PanelMarketSymbolComponent implements OnInit {
 
-  // ✅  Inicializar FormControls
-  pairControl = new FormControl('BTCUSDT');
-  timeframeControl = new FormControl('5min');
-  limitControl = new FormControl(1000);
-
   cryptoPairs = signal<string[]>(['']);
   timeframes = signal<TimeFrame[]>([{ label: '', value: '' }]);
   candleLimits = signal<number[]>([]);
@@ -30,7 +26,19 @@ export class PanelMarketSymbolComponent implements OnInit {
   timeframeChange = output<string>();
   limitChange = output<number>();
 
-  constructor() { }
+  private configDataMarket!: TypeMarket;
+
+  // ✅  Inicializar FormControls
+  pairControl = new FormControl('');
+  timeframeControl = new FormControl('');
+  limitControl = new FormControl(0);
+
+  constructor(
+    private readonly storeAppService: StoreAppService
+
+  ) {
+    this.configDataMarket = this.storeAppService.getDataMarket();
+  }
 
   ngOnInit() {
     this.cryptoPairs.set([
@@ -50,23 +58,30 @@ export class PanelMarketSymbolComponent implements OnInit {
     ]);
 
     this.candleLimits.set([50, 100, 200, 500, 1000]);
+    // set information to form controls
+    this.pairControl.setValue(this.configDataMarket.market, { onlySelf: true });
+    this.timeframeControl.setValue(this.configDataMarket.interval, { onlySelf: true });
+    this.limitControl.setValue(this.configDataMarket.limit, { onlySelf: true });
   }
 
   oncAcceptConfMarket(): void {
-    const marketData: TypeMarket = {
-      interval: this.timeframeControl.value ? this.timeframeControl.value : '5min',
-      limit: this.limitControl.value ? this.limitControl.value : 1000,
-      market: this.pairControl.value ? this.pairControl.value : 'BTCUSDT'
+    if (this.pairControl.value) {
+      this.pairChange.emit(this.pairControl.value);
     }
-    inject(PaperTradingService).setMaketData(marketData); // TODO aqui no es donde esto se cambia deuda tecnica
-    inject(CoinexService).setMaketData(marketData); // TODO aqui no es donde esto se cambia deuda tecnica
-    this.pairChange.emit(this.pairControl.value ? this.pairControl.value : 'BTCUSDT');
     if (this.timeframeControl.value) {
       this.timeframeChange.emit(this.timeframeControl.value);
     }
     if (this.limitControl.value) {
       this.limitChange.emit(this.limitControl.value)
     }
+
+    const marketData: TypeMarket = {
+      interval: this.timeframeControl.value ? this.timeframeControl.value : '5min',
+      limit: this.limitControl.value ? this.limitControl.value : 1000,
+      market: this.pairControl.value ? this.pairControl.value : 'BTCUSDT'
+    }
+
+    this.storeAppService.setDataMarket(marketData);
   }
 
 }

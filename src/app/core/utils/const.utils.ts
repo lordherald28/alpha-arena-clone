@@ -21,3 +21,5 @@ export enum eRiskRewards {
 }
 
 export type typeRiskRewards = 'tp' | 'sl' | null;
+
+export const KEY_MARKET_CONFIG_DATA = 'config-data-market';
