@@ -1,5 +1,5 @@
 // services/paper-trading.service.ts
-import { effect, inject, Injectable, OnDestroy, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { catchError, interval, Observable, of, Subscription, switchMap, tap } from 'rxjs';
 import { TradingOrder, PaperTradingConfig, Candlestick, Balance, TypeMarket } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
@@ -31,12 +31,6 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private autoTradingEnabled = signal<boolean>(false);
   private lastAIDecision = signal<{ decision: string, confidence: number } | null>(null);
 
-  private marketData = signal<{ market: string, interval: string, limit: number }>({
-    market: environment.trading.pair,
-    interval: environment.trading.interval,
-    limit: 1
-  });
-
   private $subs = new Subscription();
 
   private $candles = signal<Candlestick[]>([]);
@@ -55,8 +49,6 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     private readonly serviceCoinex: CoinexService,
   ) {
     // console.log('📊 Paper Trading iniciado con balance:', this.balance());
-    // console.log(`📞 Obteniendo el ultimo precio del symbol: ${this.marketData().market}`);
-    this.marketData.set(this.storeAppService.getDataMarket());
     this.setupAutoOrderMonitoring();
     this.startPriceMonitoring();
   }
@@ -120,11 +112,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     });
   }
 
-  getCandles(/* market: string, interval: string, limit: number */): Observable<Candlestick[]> {
+  getCandles(): Observable<Candlestick[]> {
     const candles = this.serviceCoinex.getCandles();
-    //Actualiza los datos del market data
-    // this.marketData.set({ market, interval, limit });
-    // this.$candles.set(toSignal(candles as Candlestick[], { initialValue: [] }))
     return candles;
   }
 

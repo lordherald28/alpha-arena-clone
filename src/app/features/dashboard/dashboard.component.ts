@@ -9,6 +9,7 @@ import { TradingExecutionService } from '../../core/services/trading-execution.s
 import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
 import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
 import { TypeMarket } from '../../core/models';
+import { StoreAppService } from '../../core/store/store-app.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -32,7 +33,8 @@ export class DashboardComponent implements OnInit {
   public aiResponse;
   public isRunning;
   public lastUpdate;
-  private tradingExecution = inject(TradingExecutionService)
+  private readonly storeServiceMarket = inject(StoreAppService);
+
   constructor(private tradingLogic: TradingLogicService) {
     this.candles = this.tradingLogic.candles;
     this.aiResponse = this.tradingLogic.aiResponse;
@@ -41,28 +43,6 @@ export class DashboardComponent implements OnInit {
   }
 
   eventoHijo = output<number>();
-  // En tu componente
-  testCoinExAuth() {
-    console.log('🧪 Probando autenticación con CoinEx...');
-
-    this.tradingExecution.testAuth().subscribe({
-      next: (balance) => {
-        console.log('🎉 ¡Autenticación exitosa! Balance:', balance);
-      },
-      error: (error) => {
-        console.error('💥 Error de autenticación:', error);
-
-        // Posibles soluciones según el error
-        if (error.error?.code === 25) {
-          console.log('🔧 Posibles soluciones:');
-          console.log('1. Verifica que las API Keys sean correctas');
-          console.log('2. Las keys pueden estar bloqueadas - crea nuevas');
-          console.log('3. Revisa el formato del timestamp');
-          console.log('4. CoinEx puede tener delays al activar nuevas keys');
-        }
-      }
-    });
-  }
 
   ngOnInit(): void {
     // actualizar el evento que viene del hijo
@@ -71,6 +51,7 @@ export class DashboardComponent implements OnInit {
   }
 
   public startAnalysis(/* market: TypeMarket */): void {
+    console.log('configuracion: ', this.storeServiceMarket.getDataMarket())
     this.tradingLogic.startAnalysis(/* market */);
   }
 
