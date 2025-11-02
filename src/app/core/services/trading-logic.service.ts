@@ -2,14 +2,12 @@
 import { inject, Inject, Injectable, signal } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 import { TradingExecutionService } from './trading-execution.service';
-import { GlmAiService } from './glm-ai.service';
 import { GlmAiGeneralService } from './gml-ai-general.service';
-import { Candlestick, AiResponse, TypeMarket } from '../models';
-import { environment } from '../../environments/environment';
+import { Candlestick, AiResponse } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
 import { PaperTradingService } from './paper-trading.service';
-import { RealTimePriceService } from './real-time-price.service';
 import { StoreAppService } from '../store/store-app.service';
+import { WSocketCoinEx } from './ws-coinex.service';
 
 @Injectable({
   providedIn: 'root'
@@ -18,7 +16,7 @@ export class TradingLogicService {
 
   //Inject 
   private readonly paperTrading = inject(PaperTradingService);
-  private readonly realTImeService = inject(RealTimePriceService);
+  private readonly wSocketCoinEx = inject(WSocketCoinEx);
   private readonly storeApp = inject(StoreAppService);
 
   // Signals para el estado reactivo (MANTENER lo que ya funciona)
@@ -41,7 +39,7 @@ export class TradingLogicService {
   private analysisSubscription: Subscription | null = null;
 
   market = this.storeApp.getSignalMarket();
-  currentPrice = this.realTImeService.currentPrice;
+  currentPrice = 0 /* this.wSocketCoinEx.currentPrice; */
 
   constructor(
     @Inject('ITradingService')
@@ -57,7 +55,7 @@ export class TradingLogicService {
     if (this.isRunning()) return;
 
     this.isRunning.set(true);
-    console.log('🧠 Iniciando análisis de mercado...', this.realTImeService.isConnected() );
+    // console.log('🧠 Iniciando análisis de mercado...', this.wSocketCoinEx.isConnected());
     // this.realTImeService.isConnected() === false && this.realTImeService.connect(this.market().market);
 
     // Ejecutar análisis inmediatamente y luego cada intervalo
@@ -91,7 +89,7 @@ export class TradingLogicService {
 
       // ✅ OBTENER PRECIO ACTUAL CORRECTAMENTE
       // const currentPrice = candles[candles.length - 1].close;
-      console.log(`💰 Precio actual: ${this.currentPrice()}`);
+      // console.log(`💰 Precio actual: ${this.currentPrice()}`);
 
       // 1. Primero verificar y cerrar órdenes existentes
       // this.paperTrading.checkOrders(currentPrice);
@@ -102,7 +100,7 @@ export class TradingLogicService {
         // console.log('🧠 Decisión de IA:', aiResponse);
 
         // ✅ ENVIAR DECISIÓN CON PRECIO ACTUAL
-        this.paperTrading.processAIDecision(aiResponse, this.currentPrice());
+        this.paperTrading.processAIDecision(aiResponse, 1000/* this.currentPrice() */);
       });
     });
   }
@@ -140,8 +138,8 @@ export class TradingLogicService {
       this.analysisSubscription.unsubscribe();
       this.analysisSubscription = null;
     }
-    debugger
-    this.realTImeService.disconnect();
+    // debugger
+    // this.wSocketCoinEx.disconnect();
     // this
     console.log('Análisis de trading detenido.');
   }

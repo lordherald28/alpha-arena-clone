@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { WsocketTest } from '../../../core/services/ws-test.service';
+import { WSocketCoinEx } from '../../../core/services/ws-coinex.service';
 
 
 
@@ -15,7 +15,7 @@ import { WsocketTest } from '../../../core/services/ws-test.service';
 export class TestComponent implements OnInit {
 
 
-  private ws = inject(WsocketTest);
+  private ws = inject(WSocketCoinEx);
 
 
 
@@ -26,7 +26,7 @@ export class TestComponent implements OnInit {
   }
 
   onConn(): void {
-    this.ws.connect();
+    // this.ws.connect();
   }
 
   onState() {
@@ -34,6 +34,6 @@ export class TestComponent implements OnInit {
   }
 
   onDesc() {
-    this.ws.disconnect();
+    // this.ws.disconnect();
   }
 }
