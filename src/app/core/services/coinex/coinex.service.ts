@@ -1,13 +1,12 @@
-import { computed, effect, inject, Injectable, Signal, signal } from '@angular/core';
+import {  Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, of, throwError } from 'rxjs';
-import { Balance, Candlestick, TradingOrder, TypeMarket } from '../models';
-import { ITradingService } from '../base/trading-service.interface';
+import { Observable, map, of } from 'rxjs';
+import { Balance, Candlestick, TradingOrder } from '../../models';
+import { ITradingService } from '../../base/trading-service.interface';
 
-import { environment } from '../../environments/environment';
-import { environment as envProd } from '../../environments/environment.prod';
-import { StoreAppService } from '../store/store-app.service';
-import { IGetConfigDataMarket } from '../base/segregtion.interface';
+import { environment } from '../../../environments/environment';
+import { environment as envProd } from '../../../environments/environment.prod';
+
 
 @Injectable({
   providedIn: 'root'
@@ -16,11 +15,6 @@ export class CoinexService implements ITradingService {
 
   private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
   readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
-
-  // ✅ Reemplazar por computed signal
-
-  // private readonly storeAppService = inject(StoreAppService) // TODO: Quitar luego, no ahora para no romper el codigo
-  // private marketData = computed(() => this.storeAppService.getDataMarket());  // TODO: Quitar luego, no ahora para no romper el codigo
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',

@@ -2,8 +2,8 @@ import { computed, effect, inject, Injectable, signal, WritableSignal } from '@a
 import { AiResponse, Balance, Candlestick, Market, TradingOrder, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { KEY_MARKET_CONFIG_DATA } from '../utils/const.utils';
-import { BalanceService } from '../services/balance.service';
-import { OrderManagerService } from '../services/order-manager.service';
+import { BalanceService } from '../services/helpers/trading/balance.service';
+import { OrderManagerService } from '../services/helpers/trading/order-manager.service';
 
 @Injectable({
   providedIn: 'root'

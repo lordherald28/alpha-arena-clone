@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { WSocketCoinEx } from '../../../core/services/ws-coinex.service';
+import { WSocketCoinEx } from '../../../core/services/coinex/ws-coinex.service';
 
 
 

@@ -1,8 +1,6 @@
-// src/app/services/core/balance.service.ts
-
 import { Injectable, signal } from '@angular/core';
-import { Balance } from '../models';
-import { environment } from '../../environments/environment';
+import { Balance } from '../../../models';
+import { environment } from '../../../../environments/environment';
 
 
 /**

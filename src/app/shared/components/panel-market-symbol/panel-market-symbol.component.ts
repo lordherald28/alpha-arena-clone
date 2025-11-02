@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Component, OnInit, Signal, signal, output, inject } from '@angular/core';
 import { TypeMarket } from '../../../core/models';
-import { PaperTradingService } from '../../../core/services/paper-trading.service';
-import { CoinexService } from '../../../core/services/coinex.service';
+import { PaperTradingService } from '../../../core/services/paper/paper-trading.service';
+import { CoinexService } from '../../../core/services/coinex/coinex.service';
 import { StoreAppService } from '../../../core/store/store-app.service';
 
 type TimeFrame = { label: string, value: string };

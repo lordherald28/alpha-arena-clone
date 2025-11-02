@@ -6,7 +6,7 @@ import { TradingChartComponent } from './components/trading-chart/trading-chart.
 import { AiResponsePanelComponent } from './components/ai-response-panel/ai-response-panel.component';
 import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
 import { StoreAppService } from '../../core/store/store-app.service';
-import { PaperTradingService } from '../../core/services/paper-trading.service';
+import { PaperTradingService } from '../../core/services/paper/paper-trading.service';
 import { TestComponent } from "../../shared/components/test/test.component";
 
 @Component({

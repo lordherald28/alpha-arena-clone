@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from "@angular/core";
-import { StoreAppService } from "../store/store-app.service";
-import { Market, ResponseMarketInformation, ActionSubsWS, SubscriptionMessage, TypeMarket } from "../models";
-import { environment } from "../../environments/environment";
+import { StoreAppService } from "../../store/store-app.service";
+import { Market, ResponseMarketInformation, ActionSubsWS, SubscriptionMessage, TypeMarket } from "../../models";
+import { environment } from "../../../environments/environment";
 import { BehaviorSubject, Observable } from "rxjs";
 
 export interface MessageMarketWS {
@@ -14,7 +14,6 @@ export interface MessageMarketWS {
 @Injectable({ providedIn: 'root' })
 export class WSocketCoinEx {
 
-    // private readonly StoreAppService = inject(StoreAppService);
     private marketData$ = new BehaviorSubject<ResponseMarketInformation | null>(null);
 
     public messageSubs = signal<MessageMarketWS>({ method: '', params: { key: [""] }, id: 0 });

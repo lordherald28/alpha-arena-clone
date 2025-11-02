@@ -1,13 +1,13 @@
 import { Injectable, WritableSignal, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { Candlestick, AiResponse, Balance } from '../models';
-import { environment } from '../../environments/environment';
-import { environment as envProd } from '../../environments/environment.prod';
+import { Candlestick, AiResponse, Balance } from '../../models';
+import { environment } from '../../../environments/environment';
+import { environment as envProd } from '../../../environments/environment.prod';
 
 import { RSI, MACD, ATR, EMA } from 'technicalindicators';
-import { PaperTradingService } from './paper-trading.service';
-import { StoreAppService } from '../store/store-app.service';
+import { PaperTradingService } from '../paper/paper-trading.service';
+import { StoreAppService } from '../../store/store-app.service';
 
 // TODO deuda tecnica aqui, hay ciertas funcionalidades o variables que no deberian ser de esta clase, deben estar en el servicio del broker
 @Injectable({

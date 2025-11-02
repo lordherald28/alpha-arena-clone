@@ -2,7 +2,7 @@
 import { Component, Inject, inject, OnInit, signal, Signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ITradingService } from '../../../../core/base/trading-service.interface';
-import { PaperTradingService } from '../../../../core/services/paper-trading.service';
+import { PaperTradingService } from '../../../../core/services/paper/paper-trading.service';
 import { Balance } from '../../../../core/models';
 
 
@@ -32,7 +32,7 @@ export class PaperTradingDashboardComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.balance = this.paperTrading.balance;
+    // this.balance = this.paperTrading.balance;
     this.openOrders = this.paperTrading.getPaperOrders().open;
     this.closedOrders = this.paperTrading.getPaperOrders().closed;
   }
@@ -41,7 +41,7 @@ export class PaperTradingDashboardComponent implements OnInit {
   // closedOrders = this.paperTrading.getPaperOrders().closed;
 
   resetTrading(): void {
-    this.paperTrading.resetPaperTrading(10);
+    // this.paperTrading.resetPaperTrading(10);
   }
 
 }

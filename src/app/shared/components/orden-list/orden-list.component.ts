@@ -1,7 +1,7 @@
 import { Component, input, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradingOrder } from '../../../core/models';
-import { PaperTradingService } from '../../../core/services/paper-trading.service';
+import { PaperTradingService } from '../../../core/services/paper/paper-trading.service';
 import { RealTimePriceService } from '../../../core/services/real-time-price.service';
 import { DESITION } from '../../../core/utils/const.utils';
 import { StoreAppService } from '../../../core/store/store-app.service';
