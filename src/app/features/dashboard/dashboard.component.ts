@@ -1,16 +1,13 @@
-import { Component, inject, OnInit, output, signal, WritableSignal } from '@angular/core';
+import { Component, inject, OnInit, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradingLogicService } from '../../core/services/trading-logic.service';
 import { ControlPanelComponent } from './components/control-panel/control-panel.component';
 import { TradingChartComponent } from './components/trading-chart/trading-chart.component';
-import { OrdersPanelComponent } from './components/orders-panel/orders-panel.component';
 import { AiResponsePanelComponent } from './components/ai-response-panel/ai-response-panel.component';
-import { TradingExecutionService } from '../../core/services/trading-execution.service';
 import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
-import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
-import { TypeMarket } from '../../core/models';
 import { StoreAppService } from '../../core/store/store-app.service';
 import { PaperTradingService } from '../../core/services/paper-trading.service';
+import { TestComponent } from "../../shared/components/test/test.component";
 
 @Component({
   selector: 'app-dashboard',
@@ -21,7 +18,7 @@ import { PaperTradingService } from '../../core/services/paper-trading.service';
     TradingChartComponent,
     AiResponsePanelComponent,
     PaperTradingDashboardComponent,
-    OrdenListComponent
+    TestComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

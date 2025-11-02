@@ -1,23 +1,30 @@
 // services/real-time-price.service.ts
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, computed } from '@angular/core';
 
 import { Subscription } from 'rxjs';
 import { CoinExGzipService } from './coinex-gzip.service';
+import { StoreAppService } from '../store/store-app.service';
 
 @Injectable({
     providedIn: 'root'
 })
 export class RealTimePriceService {
     private coinExService = inject(CoinExGzipService);
+    private readonly storeAppService = inject(StoreAppService);
+
+    private marketDataService = computed(() => this.storeAppService.getDataMarket());
+
     private subscription: Subscription | null = null;
 
     // Signals para datos en tiempo real
     public currentPrice = signal<number>(0);
     public marketData = signal<any>(null);
+
     public isConnected = signal<boolean>(false);
 
     connect(market: string): void {
-        this.coinExService.connect(market);
+        console.log('ACTUA MARKET: ', this.marketDataService().market)
+        this.coinExService.connect(this.marketDataService().market);
 
         this.subscription = this.coinExService.messages$.subscribe({
             next: (data) => {

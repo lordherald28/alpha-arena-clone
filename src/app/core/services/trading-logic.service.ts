@@ -126,7 +126,7 @@ export class TradingLogicService {
   placeManualOrder(side: 'BUY' | 'SELL', amount: string = '0.001'): void {
     const currentPrice = this.candles()[this.candles().length - 1]?.close || 50000;
     this.paperTrading.placeMarketOrder({
-      market: environment.trading.pair,
+      market: this.market().market,
       side: side,
       amount: amount
     }).subscribe();
@@ -140,35 +140,10 @@ export class TradingLogicService {
       this.analysisSubscription.unsubscribe();
       this.analysisSubscription = null;
     }
-    // this.realTImeService.unsubscribe();
+    debugger
+    this.realTImeService.disconnect();
     // this
     console.log('Análisis de trading detenido.');
-  }
-
-
-  // ✅ NUEVO: Método para ejecutar órdenes (USANDO EL NUEVO SERVICIO)
-  private executeOrder(decision: 'BUY' | 'SELL' | 'HOLD'): void {
-    const order = {
-      market: environment.trading.pair,
-      side: decision.toLowerCase() as 'BUY' | 'SELL',
-      amount: environment.coinex.demoAmount || '0.001' // Cantidad pequeña para testing
-    };
-
-    console.log(`🎯 Ejecutando orden ${decision}:`, order);
-
-    this.tradingExecution.placeMarketOrder(order).subscribe({
-      next: () => {
-        console.log(`✅ Orden ${decision} ejecutada exitosamente`);
-        this.tradingStatus.update(status => ({
-          ...status,
-          lastOrder: `${decision} ${order.amount} ${order.market}`,
-          totalTrades: status.totalTrades + 1
-        }));
-      },
-      error: (error) => {
-        console.error(`❌ Error en orden ${decision}:`, error);
-      }
-    });
   }
 
   // ✅ NUEVO: Métodos para controlar el trading automático

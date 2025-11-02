@@ -62,7 +62,7 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     this.realTimePrice.disconnect();
   }
 
-  // Método CORREGIDO para calcular P&L
+  // En OrdenListComponent - Método corregido
   private calculateCurrentPNL(order: TradingOrder, currentPrice: number | null): number {
     if (!currentPrice) return 0;
 

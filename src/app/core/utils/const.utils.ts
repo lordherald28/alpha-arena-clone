@@ -12,8 +12,8 @@ export enum eSTATUS {
     CLOSED = 'closed'
 }
 
-export const ATR_MULTIPLIER_SL = 1.5;
-export const ATR_MULTIPLIER_TP = 2.5;
+export const ATR_MULTIPLIER_SL = 0.03;
+export const ATR_MULTIPLIER_TP = 0.06;
 
 export enum eRiskRewards {
     TP = 'tp',

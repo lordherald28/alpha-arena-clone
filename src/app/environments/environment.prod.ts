@@ -23,7 +23,7 @@ export const environment = {
         enabled: true,
         initialBalance: 5000,
         fee: 0.001,
-        defaultRisk: 0.02
+        defaultRisk: 0.05
     },
     glmAi: {
         apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',

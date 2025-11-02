@@ -1,5 +1,5 @@
-import { effect, Injectable, signal } from '@angular/core';
-import { TypeMarket } from '../models';
+import { effect, Injectable, signal, WritableSignal } from '@angular/core';
+import { Market, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { KEY_MARKET_CONFIG_DATA } from '../utils/const.utils';
 
@@ -14,10 +14,18 @@ export class StoreAppService {
     limit: environment.trading.candleLimit
   });
 
+  private MarkInfo = signal<Market | null>(null);
 
   constructor() {
     this.loadDataMarket();
     this.saveDataMarket();
+
+    effect(() => {
+      if (this.MarkInfo()) {
+        console.log('Symbol cambiado: ', this.MarkInfo()?.market);
+        console.log(`Precio del ${this.MarkInfo()?.market} $: `, this.MarkInfo()?.mark_price);
+      }
+    })
   }
 
   /**
@@ -31,7 +39,15 @@ export class StoreAppService {
   getSignalMarket() {
     return this.marketDataConfig;
   }
-  
+
+  getMarkInfo(): WritableSignal<Market | null> {
+    return this.MarkInfo;
+  }
+
+  setMarkInfo(Market: Market): void {
+    this.MarkInfo.set(Market);
+  }
+
   /**
    * 
    */

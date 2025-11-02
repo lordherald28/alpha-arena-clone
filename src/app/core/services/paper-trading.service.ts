@@ -16,7 +16,7 @@ import { RealTimePriceService } from './real-time-price.service';
 })
 export class PaperTradingService implements ITradingService, OnDestroy {
 
-  private balance = signal<Balance>({
+  public balance = signal<Balance>({
     USDT: environment.paperTrading.initialBalance, // Balance inicial en USDT
     BTC: 0,
     totalUSDT: environment.paperTrading.initialBalance,
@@ -50,51 +50,58 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   constructor(
     private readonly serviceCoinex: CoinexService,
   ) {
-    // console.log('📊 Paper Trading iniciado con balance:', this.balance());
     this.setupAutoOrderMonitoring();
-    // this.startPriceMonitoring();
-    // this.currentPriceMarketSymbol = this.serviceCoinex.currentPriceMarketSymbol;
-    console.log('Datos del usuario: ', this.balance())
+
+    // ✅ NUEVO: Efecto para actualizar el balance total con el P&L en tiempo real
+    this.updateBalanceUser();
   }
   readonly currentPriceMarketSymbol = this.realTimePriceService.currentPrice;
+
+  private updateBalanceUser() {
+    effect(() => {
+      const openOrders = this.openOrders();
+      const currentPrice = this.currentPriceMarketSymbol();
+
+      if (openOrders.length > 0 && currentPrice) {
+        const totalPNL = openOrders.reduce((sum, order) => {
+          let pnl = 0;
+          if (order.side === DESITION.BUY) {
+            pnl = (currentPrice - order.price) * order.amount;
+          } else {
+            pnl = (order.price - currentPrice) * order.amount;
+          }
+          return sum + pnl;
+        }, 0);
+
+        // Actualizar el totalUSDT con el P&L acumulado
+        this.balance.update(bal => ({
+          ...bal,
+          totalUSDT: bal.USDT + totalPNL
+        }));
+      }
+    }, { allowSignalWrites: true });
+  }
 
   ngOnDestroy(): void {
     this.$subs.unsubscribe();
   }
 
-  calcIndicators(): void {
-    const candles = this.$candles();
-    const closes = candles.map(c => c.close);
-    const highs = candles.map(c => c.high);
-    const lows = candles.map(c => c.low);
-    const atr14 = ATR.calculate({
-      high: highs,
-      low: lows,
-      close: closes,
-      period: 14
-    });
-    this.$currentAtr.set(atr14[atr14.length - 1]);
-  }
-
   private setupAutoOrderMonitoring(): void {
     effect(() => {
       const currentPrice = this.currentPriceMarketSymbol();
-      console.log('precio real de real time ws: ', currentPrice);
-
       const openOrders = this.openOrders();
 
       if (currentPrice > 0 && openOrders.length > 0) {
         // Versión optimizada de checkOrders
-        const ordersToClose = openOrders.filter(order =>
+        const ordersToClose = openOrders.filter(order => {
           (order.side === DESITION.BUY && (currentPrice >= order.tp! || currentPrice <= order.sl!)) ||
-          (order.side === DESITION.SELL && (currentPrice <= order.tp! || currentPrice >= order.sl!))
-        );
-
+            (order.side === DESITION.SELL && (currentPrice <= order.tp! || currentPrice >= order.sl!))
+        });
         if (ordersToClose.length > 0) {
           this.closeOrders(ordersToClose);
         }
       }
-    }, {allowSignalWrites:true});
+    }, { allowSignalWrites: true });
   }
 
   // ✅ Método separado para monitoreo de precios
@@ -139,18 +146,16 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     ]);
   }
 
-  /**
-   * Colocar orden de mercado simulada
-   */
+  // En PaperTradingService - método mejorado
   placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL' | 'HOLD'; amount: string; }): Observable<any> {
     return new Observable(observer => {
       try {
         const currentPrice = this.getCurrentMarketPrice();
         const amount = parseFloat(params.amount);
-
+        debugger
         const order: TradingOrder = {
           id: `paper_${Date.now()}`,
-          market: params.market,
+          market: this.realTimePriceService.marketData().market,
           side: params.side,
           type: 'market',
           amount: amount,
@@ -159,18 +164,29 @@ export class PaperTradingService implements ITradingService, OnDestroy {
           status: 'filled'
         };
 
-        // ✅ ACTUALIZADO: Usar ATR para TP/SL (si está disponible)
-        const atr = this.$currentAtr(); // Necesitarás implementar esto
-        const { tp, sl } = atr ?
-          this.calculateTPnSLByATR(params.side, currentPrice, atr) :
-          this.calculateTPnSLByPercent(params.side, currentPrice);
+        // Calcular TP/SL
+        const atr = this.$currentAtr();
+        // const { tp, sl } = atr ?
+        //   this.calculateTPnSLByATR(params.side, currentPrice, atr) :
+        const { tp, sl } = this.calculateTPnSLByPercent(params.side, currentPrice);
 
         order.tp = tp;
         order.sl = sl;
 
-        this.executeOrder(order);
+        // ✅ MEJOR LOGGING
+        console.log('🎯 ORDEN CREADA - TP/SL ajustados para crypto:', {
+          marketCurrent: this.realTimePriceService.marketData().market,
+          market: params.market,
+          side: params.side,
+          entry: currentPrice,
+          tp: order.tp,
+          sl: order.sl,
+          distanceTP: ((order.tp - currentPrice) / currentPrice * 100).toFixed(2) + '%',
+          distanceSL: ((currentPrice - order.sl) / currentPrice * 100).toFixed(2) + '%',
+          method: atr ? 'ATR-based' : 'Percent-based'
+        });
 
-        console.log('📝 Orden PAPER ejecutada:', order);
+        this.executeOrder(order);
 
         observer.next({
           code: 0,
@@ -191,153 +207,147 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     });
   }
 
+  // En PaperTradingService - método corregido
   /**
-   * ✅ NUEVO: Calcular TP/SL basado en ATR (Estrategia crypto)
+   * ✅ CORREGIDO: Calcular TP/SL basado en ATR - AJUSTADO PARA CRYPTO
    */
   private calculateTPnSLByATR(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number, atr: number): { tp: number, sl: number } {
-    const atrMultiplierSL = ATR_MULTIPLIER_SL;   // 1.5 x ATR para SL
-    const atrMultiplierTP = ATR_MULTIPLIER_TP;  // 2.25 x ATR para TP
+    // ✅ USAR LAS NUEVAS CONSTANTES MÁS PEQUEÑAS
+    const atrMultiplierSL = ATR_MULTIPLIER_SL;   // 0.5 x ATR para SL
+    const atrMultiplierTP = ATR_MULTIPLIER_TP;   // 1.0 x ATR para TP
+
+    console.log('🎯 Calculando TP/SL con ATR para crypto:', {
+      entryPrice,
+      atr,
+      atrPercent: ((atr / entryPrice) * 100).toFixed(2) + '%',
+      slMultiplier: atrMultiplierSL,
+      tpMultiplier: atrMultiplierTP
+    });
 
     if (side === DESITION.BUY) {
-      return {
-        sl: entryPrice - (atr * atrMultiplierSL),
-        tp: entryPrice + (atr * atrMultiplierTP)
-      };
+      const sl = entryPrice - (atr * atrMultiplierSL);
+      const tp = entryPrice + (atr * atrMultiplierTP);
+
+      console.log(`📈 LONG ATR: Entrada $${entryPrice}, SL $${sl.toFixed(2)}, TP $${tp.toFixed(2)}`);
+
+      return { tp, sl };
     } else {
-      return {
-        sl: entryPrice + (atr * atrMultiplierSL),
-        tp: entryPrice - (atr * atrMultiplierTP)
-      };
+      const sl = entryPrice + (atr * atrMultiplierSL);
+      const tp = entryPrice - (atr * atrMultiplierTP);
+
+      console.log(`📉 SHORT ATR: Entrada $${entryPrice}, SL $${sl.toFixed(2)}, TP $${tp.toFixed(2)}`);
+
+      return { tp, sl };
     }
   }
 
+  // En PaperTradingService - método corregido
   /**
-   * ✅ MANTENIDO: Calcular TP/SL por porcentaje (como fallback)
+   * ✅ CORREGIDO: Calcular TP/SL por porcentaje - AJUSTADO PARA CRYPTO
    */
   private calculateTPnSLByPercent(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number): { tp: number, sl: number } {
-    const riskRewardRatio = 2;
+    const riskPercent = this.config.defaultRiskPercent; // Ahora 0.5% en lugar de 2%
+    const riskRewardRatio = 1.5; // Mantener 1.5:1
+
+    console.log('🎯 Calculando TP/SL para crypto:', {
+      entryPrice,
+      riskPercent: (riskPercent * 100) + '%',
+      riskRewardRatio
+    });
 
     if (side === DESITION.BUY) {
-      const sl = entryPrice * (1 - this.config.defaultRiskPercent);
-      const tp = entryPrice * (1 + (this.config.defaultRiskPercent * riskRewardRatio));
+      const sl = entryPrice * (1 - riskPercent);
+      const tp = entryPrice * (1 + (riskPercent * riskRewardRatio));
+
+      console.log(`📈 LONG: Entrada $${entryPrice}, SL $${sl.toFixed(2)} (${((entryPrice - sl) / entryPrice * 100).toFixed(2)}%), TP $${tp.toFixed(2)} (${((tp - entryPrice) / entryPrice * 100).toFixed(2)}%)`);
+
       return { tp, sl };
     } else {
-      const sl = entryPrice * (1 + this.config.defaultRiskPercent);
-      const tp = entryPrice * (1 - (this.config.defaultRiskPercent * riskRewardRatio));
+      const sl = entryPrice * (1 + riskPercent);
+      const tp = entryPrice * (1 - (riskPercent * riskRewardRatio));
+
+      console.log(`📉 SHORT: Entrada $${entryPrice}, SL $${sl.toFixed(2)} (${((sl - entryPrice) / entryPrice * 100).toFixed(2)}%), TP $${tp.toFixed(2)} (${((entryPrice - tp) / entryPrice * 100).toFixed(2)}%)`);
+
       return { tp, sl };
     }
   }
 
   /**
-   * Ejecutar orden y actualizar balance // TODO deuda tecnica en trading calculo de operaciones en real.
+   * Ejecutar orden y actualizar balance - SIMPLIFICADO PARA FUTUROS
    */
   private executeOrder(order: TradingOrder): void {
-    const fee = order.amount * order.price * this.config.fee;
+    // En futuros, no compramos el activo, solo operamos con el precio
+    // El "amount" representa el tamaño de la posición en USDT
 
     if (order.side === DESITION.BUY) {
-      const cost = order.amount * order.price + fee; // el costo de la operacion
-
-      if (+this.balance().available >= 1) { // TODO: Deuda tecnica >= cost, cosas que debo ver 
+      // Para LONG: restamos el monto de la posición del available
+      if (this.balance().available >= order.amount) {
         this.balance.update(bal => ({
           ...bal,
-          USDT: bal.USDT - cost,
-          available: bal.available - cost, // No entiendo, esto no se deberia actualizar, seria el aviable y restar.
-          // BTC: bal.BTC + order.amount,
-          // totalUSDT: this.calculateTotalValue(bal.USDT - cost, bal.BTC + order.amount, order.price)
+          available: bal.available - order.amount,
+          // Mantenemos USDT igual porque no estamos gastando, solo reservando margen
+          totalUSDT: bal.totalUSDT // Se actualizará con el P&L en tiempo real
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ COMPRA ejecutada: ${order.price} por ${cost} USDT`);
+        console.log(`✅ LONG abierta: $${order.amount} a precio ${order.price}`);
       } else {
-        throw new Error(`Saldo insuficiente: ${this.balance().USDT} $USDT < ${cost} $USDT`);
+        throw new Error(`Margen insuficiente: ${this.balance().available} USDT < ${order.amount} USDT`);
       }
 
     } else if (order.side === DESITION.SELL) {
-      // const revenue = order.amount * order.price - fee;
-      const cost: number = order.amount * order.price + fee; // el costo de la operacion
-      if (+this.balance().available >= order.amount) {
+      // Para SHORT: igualmente restamos el monto del available
+      if (this.balance().available >= order.amount) {
         this.balance.update(bal => ({
           ...bal,
-          available: bal.available - cost, // No entiendo, esto no se deberia actualizar, seria el aviable y restar.
-          // BTC: bal.BTC - order.amount,
-          // totalUSDT: this.calculateTotalValue(bal.USDT + cost, bal.BTC - order.amount, order.price)
+          available: bal.available - order.amount,
+          totalUSDT: bal.totalUSDT
         }));
 
         this.openOrders.update(orders => [...orders, order]);
-        console.log(`✅ VENTA ejecutada: ${order.price} por ${cost} $USDT`);
+        console.log(`✅ SHORT abierta: $${order.amount} a precio ${order.price}`);
       } else {
-        throw new Error(`BTC insuficiente: ${this.balance().BTC} BTC < ${order.amount} BTC`);
+        throw new Error(`Margen insuficiente: ${this.balance().available} USDT < ${order.amount} USDT`);
       }
     }
+
+    console.log('💰 Balance actualizado:', this.balance());
   }
 
   /**
-   * Verificar órdenes abiertas contra el precio actual
-   */
-  // checkOrders(currentPrice: number): void {
-  //   const openOrders = this.openOrders();
-  //   const ordersToClose: TradingOrder[] = [];
-
-  //   openOrders.forEach(order => {
-  //     let closeReason: typeRiskRewards = null;
-
-  //     if (order.side === DESITION.BUY) {
-  //       if (order.tp && currentPrice >= order.tp) {
-  //         closeReason = eRiskRewards.TP;
-  //       } else if (order.sl && currentPrice <= order.sl) {
-  //         closeReason = eRiskRewards.SL;
-  //       }
-  //     } else {
-  //       if (order.tp && currentPrice <= order.tp) {
-  //         closeReason = eRiskRewards.TP;
-  //       } else if (order.sl && currentPrice >= order.sl) {
-  //         closeReason = eRiskRewards.SL;
-  //       }
-  //     }
-
-  //     if (closeReason) {
-  //       order.status = 'closed';
-  //       order.closePrice = currentPrice;
-  //       order.closeReason = closeReason;
-  //       order.pnl = this.calculatePNL(order);
-  //       ordersToClose.push(order);
-  //     }
-  //   });
-
-  //   if (ordersToClose.length > 0) {
-  //     this.closeOrders(ordersToClose);
-  //   }
-  // }
-
-  /**
-   * Calcular P&L de una orden
-   */
-  private calculatePNL(order: TradingOrder): number {
-    if (!order.closePrice) return 0;
-
-    if (order.side === 'BUY') {
-      return (order.closePrice - order.price) * order.amount;
-    } else {
-      return (order.price - order.closePrice) * order.amount;
-    }
-  }
-
-  /**
-   * Cerrar órdenes y actualizar historial
+   * Cerrar órdenes y actualizar balance - CORREGIDO
    */
   private closeOrders(orders: TradingOrder[]): void {
+    orders.forEach(order => {
+      if (order.closePrice) {
+        // Calcular P&L final de la orden
+        let finalPNL = 0;
+        if (order.side === DESITION.BUY) {
+          finalPNL = (order.closePrice - order.price) * order.amount;
+        } else {
+          finalPNL = (order.price - order.closePrice) * order.amount;
+        }
+
+        // Liberar el margen y actualizar el balance real
+        this.balance.update(bal => ({
+          ...bal,
+          available: bal.available + order.amount, // Liberar margen
+          USDT: bal.USDT + finalPNL, // Aplicar P&L real al balance
+          totalUSDT: bal.USDT + finalPNL
+        }));
+
+        console.log(`🔒 Orden cerrada: ${order.side} - P&L: $${finalPNL.toFixed(2)}`);
+      }
+    });
+
+    // Remover órdenes de las abiertas
     this.openOrders.update(openOrders =>
       openOrders.filter(order => !orders.find(o => o.id === order.id))
     );
 
+    // Agregar al historial
     this.closedOrders.update(closedOrders => [...closedOrders, ...orders]);
     this.orderHistory.update(history => [...history, ...orders]);
-
-    orders.forEach(order => {
-      const result = order.closeReason === 'tp' ? '✅ TP' : '❌ SL';
-      const pnl = order.pnl || 0;
-      console.log(`${result} - Orden ${order.side.toUpperCase()} cerrada: $${pnl.toFixed(2)} PNL`);
-    });
   }
 
   /**

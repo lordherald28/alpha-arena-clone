@@ -1,8 +1,9 @@
 // components/paper-trading-dashboard/paper-trading-dashboard.component.ts
-import { Component, Inject, inject, OnInit } from '@angular/core';
+import { Component, Inject, inject, OnInit, signal, Signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ITradingService } from '../../../../core/base/trading-service.interface';
 import { PaperTradingService } from '../../../../core/services/paper-trading.service';
+import { Balance } from '../../../../core/models';
 
 
 @Component({
@@ -14,7 +15,14 @@ import { PaperTradingService } from '../../../../core/services/paper-trading.ser
 })
 export class PaperTradingDashboardComponent implements OnInit {
   // paperTrading = inject(PaperTradingService);
-  public balance!: any
+  public balance = signal<Balance>({
+    currency: '',
+    available: 0,
+    frozen: 0,
+    USDT: 0,
+    BTC: 0,
+    totalUSDT: 0
+  });
   public openOrders!: any
   public closedOrders!: any
   constructor(
@@ -24,7 +32,7 @@ export class PaperTradingDashboardComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.balance = this.paperTrading.getPaperBalance();
+    this.balance = this.paperTrading.balance;
     this.openOrders = this.paperTrading.getPaperOrders().open;
     this.closedOrders = this.paperTrading.getPaperOrders().closed;
   }

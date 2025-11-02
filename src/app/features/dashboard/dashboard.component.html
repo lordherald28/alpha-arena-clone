@@ -16,11 +16,12 @@
   <div class="main-content">
     <section class="chart-section">
       <app-trading-chart [candles]="candles()"></app-trading-chart>
+      <!-- <app-orden-list ></app-orden-list> -->
+      <app-test></app-test>
     </section>
 
     <aside class="side-panels">
       <app-paper-trading-dashboard></app-paper-trading-dashboard>
-      <app-orden-list ></app-orden-list>
       <app-ai-response-panel [aiResponse]="aiResponse()"></app-ai-response-panel>
     </aside>
   </div>

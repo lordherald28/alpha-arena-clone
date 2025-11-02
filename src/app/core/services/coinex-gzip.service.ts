@@ -1,6 +1,7 @@
 // services/coin-ex-gzip.service.ts
-import { Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Observable, single, Subject } from 'rxjs';
+import { StoreAppService } from '../store/store-app.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,10 +10,18 @@ export class CoinExGzipService {
   private ws: WebSocket | null = null;
   private messageSubject = new Subject<any>();
   public messages$ = this.messageSubject.asObservable();
+  private readonly storeAppService = inject(StoreAppService);
+
+
+  private marketData = computed(() => this.storeAppService.getDataMarket());
 
   private _id = signal<number>(0);
 
-  constructor() { }
+  constructor() {
+    effect(() => {
+      console.log('Se actualiza? ', this.marketData().market)
+    })
+  }
 
   /**
    * Conexión que maneja GZIP
@@ -32,7 +41,7 @@ export class CoinExGzipService {
 
       const message = {
         method: 'state.subscribe',
-        params: { "market_list": [market] },
+        params: { "market_list": [this.marketData().market] },
         id: Date.now()
       };
 
@@ -98,6 +107,15 @@ export class CoinExGzipService {
 
   disconnect(): void {
     if (this.ws) {
+      const message = {
+        method: 'state.unsubscribe',
+        params: { "market_list": [] },
+        id: this._id()
+      };
+      this.ws!.send(JSON.stringify(message));
+      this.ws.onmessage = async (event) => {
+        console.log('Evento de salida; ', event)
+      }
       this.ws.close();
       this.ws = null;
       console.log('🔌 WebSocket desconectado');
