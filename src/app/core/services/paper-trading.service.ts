@@ -391,23 +391,6 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   }
 
   /**
-   * ✅ NUEVO: Obtener ATR actual (necesitas implementar esto)
-   */
-  private getCurrentATR(): number | 0 {
-    // TODO: Implementar obtención de ATR actual
-    // Por ahora retornar null para usar fallback
-    // return this.glmService.currentAtr();
-    return 0
-  }
-
-  /**
-   * Calcular valor total en USDT
-   */
-  private calculateTotalValue(usdt: number, btc: number, btcPrice: number): number {
-    return usdt + (btc * btcPrice);
-  }
-
-  /**
    * Métodos adicionales para control
    */
   getPaperBalance(): Balance {
@@ -427,7 +410,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
       BTC: 0,
       totalUSDT: initialBalance,
       currency: '',
-      available: 0,
+      available: initialBalance,
       frozen: 0
     });
     this.openOrders.set([]);
