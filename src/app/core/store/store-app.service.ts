@@ -8,13 +8,14 @@ import { KEY_MARKET_CONFIG_DATA } from '../utils/const.utils';
 })
 export class StoreAppService {
 
-  private marketDataConfig = signal<TypeMarket>({
+  // Lo hice puglico ya q es un signal y se va a utilizar en toda la App, tu me diras.
+  public readonly marketDataConfig = signal<TypeMarket>({
     interval: environment.trading.interval,
     market: environment.trading.pair,
     limit: environment.trading.candleLimit
   });
 
-  private MarkInfo = signal<Market | null>(null);
+  public readonly MarkInfo = signal<Market | null>(null); // Lo hice puglico ya q es un signal y se va a utilizar en toda la App, tu me diras.
 
   // TODO: Nuevas variables refactorizadas
   public readonly candles = signal<Candlestick[]>([]); // (las velas históricas y actualizadas)

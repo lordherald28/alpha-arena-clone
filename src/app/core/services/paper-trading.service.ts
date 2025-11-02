@@ -10,7 +10,6 @@ import { ATR_MULTIPLIER_SL, ATR_MULTIPLIER_TP, DESITION, eSTATUS, MAX_ORDEN_OPEN
 import { ATR } from 'technicalindicators';
 import { StoreAppService } from '../store/store-app.service';
 
-import { RealTimePriceService } from './real-time-price.service';
 @Injectable({
   providedIn: 'root'
 })
@@ -45,7 +44,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
 
   // inject
   private readonly storeAppService = inject(StoreAppService);
-  private readonly realTimePriceService = inject(RealTimePriceService);
+  // private readonly realTimePriceService = inject(RealTimePriceService);
 
   constructor(
     private readonly serviceCoinex: CoinexService,
@@ -55,7 +54,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     // ✅ NUEVO: Efecto para actualizar el balance total con el P&L en tiempo real
     this.updateBalanceUser();
   }
-  readonly currentPriceMarketSymbol = this.realTimePriceService.currentPrice;
+  readonly currentPriceMarketSymbol = this.storeAppService.currentPrice;
 
   private updateBalanceUser() {
     effect(() => {
@@ -79,6 +78,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
           totalUSDT: bal.USDT + totalPNL
         }));
       }
+      // ✅ AÑADE ESTA LÍNEA para mantener el store sincronizado en tiempo real
+      this.storeAppService.paperBalance.set(this.balance());
     }, { allowSignalWrites: true });
   }
 
@@ -155,7 +156,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
         debugger
         const order: TradingOrder = {
           id: `paper_${Date.now()}`,
-          market: this.realTimePriceService.marketData().market,
+          market: this.storeAppService.marketDataConfig().market,
           side: params.side,
           type: 'market',
           amount: amount,
@@ -175,7 +176,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
 
         // ✅ MEJOR LOGGING
         console.log('🎯 ORDEN CREADA - TP/SL ajustados para crypto:', {
-          marketCurrent: this.realTimePriceService.marketData().market,
+          marketCurrent: this.storeAppService.marketDataConfig().market,
           market: params.market,
           side: params.side,
           entry: currentPrice,
@@ -289,7 +290,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
           totalUSDT: bal.totalUSDT // Se actualizará con el P&L en tiempo real
         }));
 
-        this.openOrders.update(orders => [...orders, order]);
+
+        this.storeAppService.openOrders.set(this.openOrders());
         console.log(`✅ LONG abierta: $${order.amount} a precio ${order.price}`);
       } else {
         throw new Error(`Margen insuficiente: ${this.balance().available} USDT < ${order.amount} USDT`);
@@ -304,23 +306,24 @@ export class PaperTradingService implements ITradingService, OnDestroy {
           totalUSDT: bal.totalUSDT
         }));
 
-        this.openOrders.update(orders => [...orders, order]);
+        this.storeAppService.openOrders.set(this.openOrders());
         console.log(`✅ SHORT abierta: $${order.amount} a precio ${order.price}`);
       } else {
         throw new Error(`Margen insuficiente: ${this.balance().available} USDT < ${order.amount} USDT`);
       }
     }
 
-    console.log('💰 Balance actualizado:', this.balance());
+    // Actualizar el balance
+    this.storeAppService.paperBalance.set(this.balance()); // no se para que actualizar el balance aqui, pero buen.
   }
 
   /**
    * Cerrar órdenes y actualizar balance - CORREGIDO
    */
   private closeOrders(orders: TradingOrder[]): void {
+    // 1. Calcular P&L y actualizar el balance local para cada orden a cerrar
     orders.forEach(order => {
       if (order.closePrice) {
-        // Calcular P&L final de la orden
         let finalPNL = 0;
         if (order.side === DESITION.BUY) {
           finalPNL = (order.closePrice - order.price) * order.amount;
@@ -328,7 +331,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
           finalPNL = (order.price - order.closePrice) * order.amount;
         }
 
-        // Liberar el margen y actualizar el balance real
+        // Liberar el margen y actualizar el balance real (local)
         this.balance.update(bal => ({
           ...bal,
           available: bal.available + order.amount, // Liberar margen
@@ -340,14 +343,22 @@ export class PaperTradingService implements ITradingService, OnDestroy {
       }
     });
 
-    // Remover órdenes de las abiertas
+    // 2. Actualizar las listas de órdenes (local)
+    // Remover las órdenes cerradas de la lista de abiertas
     this.openOrders.update(openOrders =>
       openOrders.filter(order => !orders.find(o => o.id === order.id))
     );
 
-    // Agregar al historial
+    // Agregar las órdenes cerradas al historial
     this.closedOrders.update(closedOrders => [...closedOrders, ...orders]);
     this.orderHistory.update(history => [...history, ...orders]);
+
+    // 3. Sincronizar todo con el StoreAppService
+    // Aquí es donde le dices al almacén central cual es el nuevo estado.
+    this.storeAppService.openOrders.set(this.openOrders());
+    this.storeAppService.paperBalance.set(this.balance());
+    // Si tu store también tiene un historial de órdenes, lo sincronizas aquí también.
+    this.storeAppService.ordersHistory.set(this.orderHistory());
   }
 
   /**
@@ -421,6 +432,11 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     });
     this.openOrders.set([]);
     this.closedOrders.set([]);
+
+    // Actualizar el storeAppService
+    this.storeAppService.openOrders.set(this.openOrders());
+    this.storeAppService.paperBalance.set(this.balance());
+    this.storeAppService.ordersHistory.set(this.orderHistory());
     console.log('🔄 Paper Trading reiniciado');
   }
 

@@ -27,19 +27,19 @@ export class DashboardComponent implements OnInit {
   reciboDelHijo($event: string) {
     console.log('Mensaje recibido del hijo:', $event);
   }
-  public candles;
-  public aiResponse;
+  // public candles;
+  // public aiResponse;
   public isRunning;
-  public lastUpdate;
+  // public lastUpdate;
   private readonly storeServiceMarket = inject(StoreAppService);
 
   public readonly currentPriceSymbol = inject(PaperTradingService).currentPriceMarketSymbol();
 
   constructor(private tradingLogic: TradingLogicService) {
-    this.candles = this.tradingLogic.candles;
-    this.aiResponse = this.tradingLogic.aiResponse;
+    // this.candles = this.tradingLogic.candles;
+    // this.aiResponse = this.tradingLogic.aiResponse;
     this.isRunning = this.tradingLogic.isRunning;
-    this.lastUpdate = this.tradingLogic.lastUpdate;
+    // this.lastUpdate = this.tradingLogic.lastUpdate;
   }
 
 

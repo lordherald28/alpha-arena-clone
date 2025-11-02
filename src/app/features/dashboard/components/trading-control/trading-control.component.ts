@@ -17,23 +17,5 @@ export class TradingControlComponent {
   tradingLogic = inject(TradingLogicService);
   tradingExecution = inject(TradingExecutionService);
 
-  startTrading(): void {
-    this.tradingLogic.startTrading();
-  }
 
-  stopTrading(): void {
-    this.tradingLogic.stopTrading();
-  }
-
-  refreshBalance(): void {
-    this.tradingLogic.refreshBalance();
-  }
-
-  buy(): void {
-    this.tradingLogic.placeManualOrder(DESITION.BUY, '0.001');
-  }
-
-  sell(): void {
-    this.tradingLogic.placeManualOrder(DESITION.SELL, '0.001');
-  }
 }
