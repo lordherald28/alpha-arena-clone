@@ -3,6 +3,7 @@ import { Candlestick, TypeMarket } from "../../../models";
 
 import { IndicatorServices } from '../indicators.service';
 import { StoreAppService } from "../../../store/store-app.service";
+import { LIMI_OPEN_ORDERS } from "../../../utils/const.utils";
 
 @Injectable({ providedIn: 'root' })
 export class GenerateServicePrompt {
@@ -15,7 +16,7 @@ export class GenerateServicePrompt {
         candles: Candlestick[],
         accountBalance: number,
         openPositions: number,
-        marketConfig:TypeMarket
+        marketConfig: TypeMarket
     ): string {
 
 
@@ -172,7 +173,7 @@ You are an advanced AI trading system specialized in multi-strategy cryptocurren
 - 24h Volume: ${lastVolume.toFixed(2)}
 - Account Balance: ${accountBalance.toFixed(2)} USDT
 - Available Margin: ${availableMargin.toFixed(2)} USDT
-- Open Positions: ${openPositions}/3
+- Open Positions: ${openPositions}/${LIMI_OPEN_ORDERS}
 
 **COMPREHENSIVE TECHNICAL INDICATORS:**
 - Trend Indicators:

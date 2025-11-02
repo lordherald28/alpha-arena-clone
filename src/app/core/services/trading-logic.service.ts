@@ -7,6 +7,7 @@ import { ITradingService } from '../base/trading-service.interface';
 import { PaperTradingService } from './paper/paper-trading.service';
 import { StoreAppService } from '../store/store-app.service';
 import { WSocketCoinEx } from './coinex/ws-coinex.service';
+import { LIMI_OPEN_ORDERS } from '../utils/const.utils';
 
 @Injectable({
   providedIn: 'root'
@@ -99,13 +100,16 @@ export class TradingLogicService {
       // const currentPrice = candles[candles.length - 1].close;
       // console.log(`💰 Precio actual: ${this.currentPrice()}`);
 
-      // 1. Primero verificar y cerrar órdenes existentes
-      // this.paperTrading.checkOrders(currentPrice);
-
-      // 2. Análisis de IA
+      // 1. Primero verificar y cerrar órdenes existentes, cerrar no, evitar limite de ordenes abiertas, asi evitamos llamar a la IA
       const accountBalance = this.storeApp.paperBalance().USDT;
       const openPositions = this.storeApp.openOrders().length;
       const typeMarket = this.storeApp.marketDataConfig();
+      const currentPrice = this.storeApp.currentPrice();
+
+      if (openPositions === LIMI_OPEN_ORDERS) return void 0;
+      // this.paperTrading.checkOrders(currentPrice);
+
+      // 2. Análisis de IA
 
       this.subscripciones.push(this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket).subscribe(aiResponse => {
 
@@ -116,7 +120,6 @@ export class TradingLogicService {
         console.log('🧠 Decisión de IA:', aiResponse);
 
         // ✅ ENVIAR DECISIÓN CON PRECIO ACTUAL
-        const currentPrice = this.storeApp.currentPrice();
 
         // Ejecutar la decisión de trading con la condicion corto circuito, dime si est bien asi?
         currentPrice && this.paperTrading.processAIDecision(aiResponse, currentPrice); // no se si guardarlo en una variblae local el tradinglogic o usar el del storeApp directamente
