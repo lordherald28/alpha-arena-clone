@@ -110,7 +110,7 @@ export class TradingChartComponent implements AfterViewInit, OnDestroy {
    */
   private updateChartWithIndicators(candles: Candlestick[]): void {
     // Preparar datos de velas - ✅ ASEGURAR 6 DECIMALES
-    const candleData: CandlestickData[] = candles.map(c => ({
+    const candleData: CandlestickData[] = candles.map(c => ({ // Aqui se puede usar el patron adapter (Clean Arq.)
       time: (c.timestamp / 1000) as Time,
       open: this.roundToSixDecimals(c.open),
       high: this.roundToSixDecimals(c.high),
