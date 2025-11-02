@@ -17,15 +17,14 @@ export class StoreAppService {
   private MarkInfo = signal<Market | null>(null);
 
   // TODO: Nuevas variables refactorizadas
-  candles = signal<Candlestick[]>([]); // (las velas históricas y actualizadas)
-  currentPrice = signal<number>(0); // (el precio en tiempo real)
-  paperBalance = signal<Balance | null>(null); // (el balance de paper trading)
-  openOrders = signal<TradingOrder[]>([]); // (las órdenes abiertas)
-  orders = signal<TradingOrder[]>([]); // (las órdenes en general)
-  ordersHistory = signal<TradingOrder[]>([]); // (historial de órdenes)
-  // aiResponse = signal<AiResponse | null>(null); // (respuesta de la IA)
-  aiResponseHistory = signal<AiResponse[]>([]); // (historial de respuestas de la IA) / Para tener trazabilidad de la misma y ver una si se desea en la UI
-  isLoading = signal<boolean>(false); // Si esta cargando, tema Spiner en UI
+  public readonly candles = signal<Candlestick[]>([]); // (las velas históricas y actualizadas)
+  public readonly currentPrice = signal<number>(0); // (el precio en tiempo real)
+  public readonly paperBalance = signal<Balance | null>(null); // (el balance de paper trading)
+  public readonly openOrders = signal<TradingOrder[]>([]); // (las órdenes abiertas)
+  public readonly orders = signal<TradingOrder[]>([]); // (las órdenes en general)
+  public readonly ordersHistory = signal<TradingOrder[]>([]); // (historial de órdenes)
+  public readonly aiResponseHistory = signal<AiResponse[]>([]); // (historial de respuestas de la IA) / Para tener trazabilidad de la misma y ver una si se desea en la UI
+  public readonly isLoading = signal<boolean>(false); // Si esta cargando, tema Spiner en UI
 
 
   constructor() {
