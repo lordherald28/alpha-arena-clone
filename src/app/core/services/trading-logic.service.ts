@@ -50,6 +50,7 @@ export class TradingLogicService {
 
     // Se suscriba a wSocketCoinEx.getMarketData$() para recibir los datos en tiempo real.
     if (market) {
+      // Error, primero las 1000 velas rest api y luego empieza el servicio de tiempo real.
       this.wSocketCoinEx.connect(market);
       this.subscripciones.push(this.wSocketCoinEx.getMarketData$().subscribe(data => {
         if (data) {

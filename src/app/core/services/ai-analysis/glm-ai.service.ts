@@ -1,13 +1,11 @@
-import { Injectable, WritableSignal, inject, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { Candlestick, AiResponse, Balance } from '../../models';
+import { Candlestick, AiResponse, TypeMarket } from '../../models';
 import { environment } from '../../../environments/environment';
 import { environment as envProd } from '../../../environments/environment.prod';
-
-import { RSI, MACD, ATR, EMA } from 'technicalindicators';
-import { PaperTradingService } from '../paper/paper-trading.service';
-import { StoreAppService } from '../../store/store-app.service';
+import { IndicatorServices } from '../helpers/indicators.service';
+import { GenerateServicePrompt } from '../helpers/ia/generate-prompt-ia.services';
 
 // TODO deuda tecnica aqui, hay ciertas funcionalidades o variables que no deberian ser de esta clase, deben estar en el servicio del broker
 @Injectable({
@@ -15,18 +13,16 @@ import { StoreAppService } from '../../store/store-app.service';
 })
 export class GlmAiService {
   private apiUrl = environment.production ? envProd.glmAi.baseUrl : environment.glmAi.baseUrl;
-  // private paperTrading = inject(PaperTradingService);
-  private storeAppService = inject(StoreAppService);
-
-  readonly currentAtr = signal<number>(0); // ← readonly para seguridad
 
 
-  constructor(private http: HttpClient) { }
+  private readonly http = inject(HttpClient);
+  private readonly generatePrompt = inject(GenerateServicePrompt);
+  private readonly indicators = inject(IndicatorServices);
 
-  accountBalance = this.storeAppService.paperBalance().USDT; // Obtenido del storeAppService el balance de USDT
 
-  analyzeMarket(candles: Candlestick[]): Observable<AiResponse> {
-    const prompt = this.buildPrompt(candles);
+
+  analyzeMarket(candles: Candlestick[], accountBalance: number, openPositions: number, typeMarket: TypeMarket): Observable<AiResponse> {
+    const prompt = this.buildPrompt(candles, accountBalance, openPositions, typeMarket);
 
     const body = {
       model: 'glm-4.6', // o 'glm-4' para más capacidad
@@ -66,7 +62,7 @@ export class GlmAiService {
     );
   }
 
-  private buildPrompt(candles: Candlestick[]): string {
+  private buildPrompt(candles: Candlestick[], accountBalance: number, openPositions: number, typeMarket: TypeMarket): string {
     if (candles.length < 50) {
       return "No hay suficientes velas para realizar un análisis. Proporciona al menos 50 velas.";
     }
@@ -77,25 +73,12 @@ export class GlmAiService {
 
     try {
       // ✅ CÁLCULOS CORREGIDOS con manejo de errores
-      const rsi = RSI.calculate({ period: 7, values: closes });
-      const ema660 = EMA.calculate({ period: 660, values: closes });
+      const rsi = this.indicators.calculateRSI(closes, 7);
+      const ema660 = this.indicators.calculateEMA(closes, 660);
 
       // ✅ ATR CORREGIDO - Verifica el formato específico
-      const atr14 = ATR.calculate({
-        high: highs,
-        low: lows,
-        close: closes,
-        period: 14
-      });
-
-      const macd = MACD.calculate({
-        values: closes,
-        fastPeriod: 12,
-        slowPeriod: 26,
-        signalPeriod: 9,
-        SimpleMAOscillator: false,
-        SimpleMASignal: false,
-      });
+      const atr14 = this.indicators.calculateATR(highs, lows, closes, 14);
+      const macd = this.indicators.calculateMACD(closes);
 
       // ✅ Verificar que los arrays tengan datos
       if (!rsi.length || !ema660.length || !atr14.length || !macd.length) {
@@ -114,49 +97,6 @@ export class GlmAiService {
       const lastAtr14 = atr14[atr14.length - 1];
       const lastMacd = macd[macd.length - 1];
 
-      // Actualizar ultimo atr
-      this.currentAtr.set(lastAtr14);
-
-      // ✅ DEBUG COMPLETO - CRÍTICO
-      // console.log('🐛 DEBUG COMPLETO INDICADORES:', {
-      //   // Datos de entrada
-      //   totalVelas: candles.length,
-      //   ultimos5Closes: closes.slice(-5),
-
-      //   // Valores actuales
-      //   ultimaVela: {
-      //     timestamp: new Date(lastCandle.timestamp),
-      //     close: lastClose,
-      //     high: lastCandle.high,
-      //     low: lastCandle.low,
-      //     volume: lastVolume
-      //   },
-
-      //   // Indicadores calculados
-      //   indicadores: {
-      //     rsi: lastRsi,
-      //     ema660: lastEma660,
-      //     atr14: lastAtr14,
-      //     macd: lastMacd
-      //   },
-
-      //   // Flags calculados
-      //   flags: {
-      //     priceBelowEma660: lastClose < lastEma660, // Tendencia bajista
-      //     priceEncimaEma660: lastClose > lastEma660, // Tendencia Alcista
-      //     rsiOverbought: lastRsi > 70, // Sobrecomprado
-      //     rsiOversold: lastRsi < 30 // Sobrevendido
-      //   },
-
-      //   // Verificación de arrays
-      //   longitudes: {
-      //     rsi: rsi.length,
-      //     ema660: ema660.length,
-      //     atr14: atr14.length,
-      //     macd: macd.length
-      //   }
-      // });
-
       // Derivados
       const isBelowEma660 = lastClose < lastEma660;
       const isRsiOverbought = lastRsi > 70;
@@ -164,15 +104,6 @@ export class GlmAiService {
       const macdCross = (lastMacd?.MACD != null && lastMacd?.signal != null)
         ? (lastMacd.MACD > lastMacd.signal ? 'bullish' : 'bearish')
         : 'unknown';
-
-      // Si el RSI está en 34, estos flags DEBEN ser:
-      // console.log('🎯 VERIFICACIÓN FLAGS RSI:', {
-      //   rsiValue: lastRsi,
-      //   shouldBeOverbought: isRsiOverbought, // Debe ser FALSE
-      //   shouldBeOversold: isRsiOversold,     // Debe ser TRUE
-      //   actualOverbought: isRsiOverbought,
-      //   actualOversold: isRsiOversold
-      // });
 
       // Prompt tipo Alpha Arena
       return `
@@ -186,8 +117,7 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - Timeframe: ${environment.trading.interval}
 - Last Close Price: ${lastClose}
 - Last Volume: ${lastVolume}
-- Account Balance: ${this.accountBalance} USDT
-- Available Balance: ${this.accountBalance} USDT
+- Account Balance: ${accountBalance} USDT
 
 **MAIN TECHNICAL INDICATORS:**
 - EMA 660: ${lastEma660} (dominant trend)
@@ -204,10 +134,10 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - MACD Crossover: ${macdCross} like filter confirmation
 
 **RISK MANAGEMENT INTEGRATION:**
-- CURRENT BALANCE: ${this.accountBalance} USDT
-- RISK PER TRADE: 2% of capital = ${this.accountBalance * 0.02} USDT
+- CURRENT BALANCE: ${accountBalance} USDT
+- RISK PER TRADE: 2% of capital = ${accountBalance * 0.02} USDT
 - POSITION SIZE CALCULATION: Based on ATR and balance
-- MAX POSITION SIZE: ${this.accountBalance * 0.02} USDT (2% rule)
+- MAX POSITION SIZE: ${accountBalance * 0.02} USDT (2% rule)
 
 
 **FIRST TOUCH RSI DETECTION (CRITICAL):**
@@ -222,14 +152,14 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 2. MOMENTUM: FIRST TOUCH RSI >=70 (${lastRsi} >=70 and ${previousRsi} <70)
 3. CONFIRMATION: MACD in bearish crossover or negative histogram
 4. VOLATILITY: ATR14 indicates operable conditions
-5. RISK CAPACITY: Available balance > ${this.accountBalance * 0.02} USDT AND positions available > 0
+5. RISK CAPACITY: Available balance > ${accountBalance * 0.02} USDT AND positions available > 0
 
 **BUY SIGNAL (Long) - REQUIREMENTS:**
 1. TREND: Price ABOVE EMA660 (${!isBelowEma660})
 2. MOMENTUM: FIRST TOUCH RSI <=30 (${lastRsi} <=30 and ${previousRsi} >30)
 3. CONFIRMATION: MACD in bullish crossover or positive histogram
 4. VOLATILITY: ATR14 within normal ranges
-5. RISK CAPACITY: Available balance > ${this.accountBalance * 0.02} USDT AND positions available > 0
+5. RISK CAPACITY: Available balance > ${accountBalance * 0.02} USDT AND positions available > 0
 
 **ADVANCED RISK MANAGEMENT:**
 - MINIMUM BALANCE: If account balance < 20 USDT → REDUCE position size to 1%
@@ -270,7 +200,7 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - Normal conditions: 2% of balance
 - High volatility: 1% of balance  
 - Low balance (< 20 USDT): 1% of balance
-- Calculated size: ${Math.min(this.accountBalance * 0.02, this.accountBalance * 0.01 * (lastAtr14 / lastClose > 0.02 ? 0.5 : 1))} USDT
+- Calculated size: ${Math.min(accountBalance * 0.02, accountBalance * 0.01 * (lastAtr14 / lastClose > 0.02 ? 0.5 : 1))} USDT
 
 **STRICT JSON OUTPUT FORMAT (SPANISH ONLY):**
 {
@@ -281,7 +211,7 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
     "stop_loss_percent": 1.5,
     "take_profit_percent": 2.25,
     "position_size": 0.02,
-    "max_position_value": ${this.accountBalance * 0.02},
+    "max_position_value": ${accountBalance * 0.02},
  
   }
 }

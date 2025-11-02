@@ -9,8 +9,6 @@ import { environment } from "../../../environments/environment";
 import { environment as envProd } from '../../../environments/environment.prod';
 
 // Importaciones para indicadores técnicos
-// import { RSI, EMA, ATR, MACD, Stochastic, CCI, ADX, BollingerBands } from 'technicalindicators';
-import { StoreAppService } from "../../store/store-app.service";
 import { GenerateServicePrompt } from "../helpers/ia/generate-prompt-ia.services";
 
 @Injectable({ providedIn: 'root' })
