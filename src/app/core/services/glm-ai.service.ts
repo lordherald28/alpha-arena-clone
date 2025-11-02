@@ -7,6 +7,7 @@ import { environment as envProd } from '../../environments/environment.prod';
 
 import { RSI, MACD, ATR, EMA } from 'technicalindicators';
 import { PaperTradingService } from './paper-trading.service';
+import { StoreAppService } from '../store/store-app.service';
 
 // TODO deuda tecnica aqui, hay ciertas funcionalidades o variables que no deberian ser de esta clase, deben estar en el servicio del broker
 @Injectable({
@@ -14,18 +15,15 @@ import { PaperTradingService } from './paper-trading.service';
 })
 export class GlmAiService {
   private apiUrl = environment.production ? envProd.glmAi.baseUrl : environment.glmAi.baseUrl;
-  private paperTrading = inject(PaperTradingService);
+  // private paperTrading = inject(PaperTradingService);
+  private storeAppService = inject(StoreAppService);
 
   readonly currentAtr = signal<number>(0); // ← readonly para seguridad
 
 
-  constructor(private http: HttpClient) {
-    this.paperTrading.getAccountBalance().subscribe((balance: Balance[]) => {
-      this.accountBalance.set(+balance[0].available)
-    })
-  }
+  constructor(private http: HttpClient) { }
 
-  accountBalance: WritableSignal<number> = signal<number>(0);
+  accountBalance = this.storeAppService.paperBalance().USDT; // Obtenido del storeAppService el balance de USDT
 
   analyzeMarket(candles: Candlestick[]): Observable<AiResponse> {
     const prompt = this.buildPrompt(candles);
@@ -188,8 +186,8 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - Timeframe: ${environment.trading.interval}
 - Last Close Price: ${lastClose}
 - Last Volume: ${lastVolume}
-- Account Balance: ${this.accountBalance()} USDT
-- Available Balance: ${this.accountBalance()} USDT
+- Account Balance: ${this.accountBalance} USDT
+- Available Balance: ${this.accountBalance} USDT
 
 **MAIN TECHNICAL INDICATORS:**
 - EMA 660: ${lastEma660} (dominant trend)
@@ -206,10 +204,10 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - MACD Crossover: ${macdCross} like filter confirmation
 
 **RISK MANAGEMENT INTEGRATION:**
-- CURRENT BALANCE: ${this.accountBalance()} USDT
-- RISK PER TRADE: 2% of capital = ${this.accountBalance() * 0.02} USDT
+- CURRENT BALANCE: ${this.accountBalance} USDT
+- RISK PER TRADE: 2% of capital = ${this.accountBalance * 0.02} USDT
 - POSITION SIZE CALCULATION: Based on ATR and balance
-- MAX POSITION SIZE: ${this.accountBalance() * 0.02} USDT (2% rule)
+- MAX POSITION SIZE: ${this.accountBalance * 0.02} USDT (2% rule)
 
 
 **FIRST TOUCH RSI DETECTION (CRITICAL):**
@@ -224,14 +222,14 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 2. MOMENTUM: FIRST TOUCH RSI >=70 (${lastRsi} >=70 and ${previousRsi} <70)
 3. CONFIRMATION: MACD in bearish crossover or negative histogram
 4. VOLATILITY: ATR14 indicates operable conditions
-5. RISK CAPACITY: Available balance > ${this.accountBalance() * 0.02} USDT AND positions available > 0
+5. RISK CAPACITY: Available balance > ${this.accountBalance * 0.02} USDT AND positions available > 0
 
 **BUY SIGNAL (Long) - REQUIREMENTS:**
 1. TREND: Price ABOVE EMA660 (${!isBelowEma660})
 2. MOMENTUM: FIRST TOUCH RSI <=30 (${lastRsi} <=30 and ${previousRsi} >30)
 3. CONFIRMATION: MACD in bullish crossover or positive histogram
 4. VOLATILITY: ATR14 within normal ranges
-5. RISK CAPACITY: Available balance > ${this.accountBalance() * 0.02} USDT AND positions available > 0
+5. RISK CAPACITY: Available balance > ${this.accountBalance * 0.02} USDT AND positions available > 0
 
 **ADVANCED RISK MANAGEMENT:**
 - MINIMUM BALANCE: If account balance < 20 USDT → REDUCE position size to 1%
@@ -272,7 +270,7 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
 - Normal conditions: 2% of balance
 - High volatility: 1% of balance  
 - Low balance (< 20 USDT): 1% of balance
-- Calculated size: ${Math.min(this.accountBalance() * 0.02, this.accountBalance() * 0.01 * (lastAtr14 / lastClose > 0.02 ? 0.5 : 1))} USDT
+- Calculated size: ${Math.min(this.accountBalance * 0.02, this.accountBalance * 0.01 * (lastAtr14 / lastClose > 0.02 ? 0.5 : 1))} USDT
 
 **STRICT JSON OUTPUT FORMAT (SPANISH ONLY):**
 {
@@ -283,7 +281,7 @@ You are an AI system specialized in algorithmic cryptocurrency trading focused o
     "stop_loss_percent": 1.5,
     "take_profit_percent": 2.25,
     "position_size": 0.02,
-    "max_position_value": ${this.accountBalance() * 0.02},
+    "max_position_value": ${this.accountBalance * 0.02},
  
   }
 }

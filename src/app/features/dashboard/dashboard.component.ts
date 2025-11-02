@@ -33,7 +33,7 @@ export class DashboardComponent implements OnInit {
   // public lastUpdate;
   private readonly storeServiceMarket = inject(StoreAppService);
 
-  public readonly currentPriceSymbol = inject(PaperTradingService).currentPriceMarketSymbol();
+  // public readonly currentPriceSymbol = inject(PaperTradingService).currentPriceMarketSymbol();
 
   constructor(private tradingLogic: TradingLogicService) {
     // this.candles = this.tradingLogic.candles;

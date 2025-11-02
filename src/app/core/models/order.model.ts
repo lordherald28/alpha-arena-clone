@@ -31,7 +31,7 @@ export interface TradingOrder {
     amount: number;
     price: number; // Precio de ejecución
     timestamp: number;
-    status: 'open' | 'filled' | 'canceled' | 'closed';
+    status: StatusOrderType;
     tp?: number;   // Take Profit
     sl?: number;   // Stop Loss
     closePrice?: number;
@@ -44,3 +44,12 @@ export interface PaperTradingConfig {
     fee: number; // Comisión (ej: 0.001 para 0.1%)
     defaultRiskPercent: number; // % de riesgo por operación
 }
+
+export const statusOrder = {
+    open: 'open',
+    filled: 'filled',
+    canceled: 'canceled',
+    closed: 'closed'
+}
+
+export type StatusOrderType = typeof statusOrder[keyof typeof statusOrder];

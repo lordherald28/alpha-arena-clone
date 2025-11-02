@@ -17,22 +17,21 @@ import { StoreAppService } from "../store/store-app.service";
 export class GlmAiGeneralService {
 
     private apiUrl = environment.production ? envProd.glmAi.baseUrl : environment.glmAi.baseUrl;
-    private paperTrading = inject(PaperTradingService);
+    private storeAppService = inject(StoreAppService);
+
     private readonly http = inject(HttpClient);
-    accountBalance: WritableSignal<number> = signal<number>(0);
+    readonly accountBalance = computed(() => this.storeAppService.paperBalance().available);
+    readonly marketConfig = computed(() => this.storeAppService.getDataMarket());
 
     readonly currentAtr = signal<number>(0);
     readonly currentMarketData = signal<any>(null);
-    readonly marketConfig = computed(() => this.StoreService.getDataMarket());
 
-    readonly positionOpens = this.paperTrading.openOrders;
-
-    private StoreService = inject(StoreAppService);
+    readonly positionOpens = this.storeAppService.openOrders;
 
     constructor() {
-        this.paperTrading.getAccountBalance().subscribe((balance: Balance[]) => {
-            this.accountBalance.set(+balance[0].available)
-        });
+        // this.paperTrading.getAccountBalance().subscribe((balance: Balance[]) => {
+        //     this.accountBalance.set(+balance[0].available)
+        // });
         effect(() => {
             console.log('openPositions: ', this.positionOpens().length);
         })
