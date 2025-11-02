@@ -18,10 +18,10 @@ export class CoinexService implements ITradingService {
   readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
 
   // ✅ Reemplazar por computed signal
-  
-  private readonly storeAppService = inject(StoreAppService)
-  private marketData = computed(() => this.storeAppService.getDataMarket());
-  
+
+  // private readonly storeAppService = inject(StoreAppService) // TODO: Quitar luego, no ahora para no romper el codigo
+  // private marketData = computed(() => this.storeAppService.getDataMarket());  // TODO: Quitar luego, no ahora para no romper el codigo
+
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
     '1h', '2h', '4h', '6h', '12h',
@@ -50,20 +50,21 @@ export class CoinexService implements ITradingService {
    * @returns 
    */
   getCandles(): Observable<Candlestick[]> {
-    if (!this.VALID_INTERVALS.includes(this.marketData().interval)) {
-      return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
-    }
+
+    // if (!this.VALID_INTERVALS.includes(this.marketData().interval)) {
+    //   return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
+    // }
 
     const url = `${this.BASE_URL}/futures/kline`;
 
 
     const params = new HttpParams()
-      .set('market', this.marketData().market.toUpperCase())
-      .set('limit', this.marketData().limit.toString())
-      .set('period', this.marketData().interval)
+      .set('market', environment.trading.pair/* this.marketData().market.toUpperCase() */) 
+      .set('limit', environment.trading.candleLimit /* this.marketData().limit.toString() */)
+      .set('period', environment.trading.interval /* this.marketData().interval */)
     // .set('period', '');
 
-    console.log('🔍 Parámetros enviados:', this.marketData());
+    // console.log('🔍 Parámetros enviados:', this.marketData());
 
     return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } }).pipe(
       map(response => {

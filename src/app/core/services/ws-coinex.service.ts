@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from "@angular/core";
 import { StoreAppService } from "../store/store-app.service";
 import { Market, ResponseMarketInformation, ActionSubsWS, SubscriptionMessage, TypeMarket } from "../models";
 import { environment } from "../../environments/environment";
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, Observable } from "rxjs";
 
 export interface MessageMarketWS {
     // Subscribe to a singular market
@@ -21,15 +21,15 @@ export class WSocketCoinEx {
 
     private wsocket !: WebSocket;
 
-    // private storeApp = inject(StoreAppService);
-
     private url = environment.coinex.wsUrl;
 
     private id: number = 0;
 
     constructor() { }
 
-    connect(TypeMarket: TypeMarket): void {
+    // Metodos publicos
+
+    public connect(TypeMarket: TypeMarket): void {
 
         this.wsocket = new WebSocket(this.url);
         const message: SubscriptionMessage = {
@@ -62,28 +62,7 @@ export class WSocketCoinEx {
         }
     }
 
-    private async BlobToJsonObject(event: MessageEvent<any>): Promise<Market | null> {
-        const blob = event.data;
-
-        // PASO 1: Crear un stream de descompresión (Gzip es el más común)
-        const decompressionStream = new DecompressionStream('gzip');
-
-        const descomprimido = blob.stream().pipeThrough(decompressionStream);
-
-        const respuesta = new Response(descomprimido);
-
-        const texto = await respuesta.text();
-
-        const json = JSON.parse(texto) as ResponseMarketInformation;
-
-        if (json.data) {
-            // this.StoreAppService.setMarkInfo(json.data.state_list[0]);
-            return json.data.state_list[0];
-        }
-        return null;
-    }
-
-    disconnect(TypeMarket: TypeMarket): void {
+    public disconnect(TypeMarket: TypeMarket): void {
         if (this.wsocket) {
             this.wsocket.onmessage = (e) => {
                 const message: SubscriptionMessage = {
@@ -99,10 +78,38 @@ export class WSocketCoinEx {
         }
     }
 
-    state(): string {
+    public state(): string {
         if (this.wsocket.OPEN) return 'Abierto';
         if (this.wsocket.CLOSING) return 'Conectado';
         if (this.wsocket.CLOSING) return 'Cerrando';
         return 'Cerrado';
+    }
+
+    public getMarketData$(): Observable<ResponseMarketInformation | null> {
+        {
+            return this.marketData$.asObservable();
+        }
+    }
+    // Metodos privados
+
+    private async BlobToJsonObject(event: MessageEvent<any>): Promise<void> {
+        const blob = event.data;
+
+        // PASO 1: Crear un stream de descompresión (Gzip es el más común)
+        const decompressionStream = new DecompressionStream('gzip');
+
+        const descomprimido = blob.stream().pipeThrough(decompressionStream);
+
+        const respuesta = new Response(descomprimido);
+
+        const texto = await respuesta.text();
+
+        const json = JSON.parse(texto) as ResponseMarketInformation;
+
+        if (json.data) {
+            // this.StoreAppService.setMarkInfo(json.data.state_list[0]);
+            this.marketData$.next(json);
+        }
+
     }
 }
