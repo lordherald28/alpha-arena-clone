@@ -1,7 +1,7 @@
-import {  Injectable, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, of } from 'rxjs';
-import { Balance, Candlestick, TradingOrder } from '../../models';
+import { Observable, map, of, throwError } from 'rxjs';
+import { Balance, Candlestick, TradingOrder, TypeMarket, validIntervals } from '../../models';
 import { ITradingService } from '../../base/trading-service.interface';
 
 import { environment } from '../../../environments/environment';
@@ -43,22 +43,17 @@ export class CoinexService implements ITradingService {
    * @param limit 
    * @returns 
    */
-  getCandles(): Observable<Candlestick[]> {
+  getCandles(marketData: TypeMarket): Observable<Candlestick[]> {
 
-    // if (!this.VALID_INTERVALS.includes(this.marketData().interval)) {
-    //   return throwError(() => new Error(`Intervalo no válido. Usa: ${this.VALID_INTERVALS.join(', ')}`));
-    // }
+    if (!validIntervals.includes(marketData.interval)) {
+      return throwError(() => new Error(`Intervalo no válido. Usa: ${validIntervals.join(', ')}`));
+    }
 
     const url = `${this.BASE_URL}/futures/kline`;
-
-
     const params = new HttpParams()
-      .set('market', environment.trading.pair/* this.marketData().market.toUpperCase() */) 
-      .set('limit', environment.trading.candleLimit /* this.marketData().limit.toString() */)
-      .set('period', environment.trading.interval /* this.marketData().interval */)
-    // .set('period', '');
-
-    // console.log('🔍 Parámetros enviados:', this.marketData());
+      .set('market', marketData.market.toUpperCase())
+      .set('limit', marketData.limit.toString())
+      .set('period', marketData.interval)
 
     return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } }).pipe(
       map(response => {

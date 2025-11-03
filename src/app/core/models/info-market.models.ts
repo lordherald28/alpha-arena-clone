@@ -21,6 +21,6 @@ export interface Market {
     period: number;
 }
 
-interface state_list {
+export interface state_list {
     state_list: Market[];
 }

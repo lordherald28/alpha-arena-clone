@@ -1,8 +1,8 @@
-import { inject, Injectable, signal } from "@angular/core";
+import { computed, inject, Injectable, signal } from "@angular/core";
 import { StoreAppService } from "../../store/store-app.service";
 import { Market, ResponseMarketInformation, ActionSubsWS, SubscriptionMessage, TypeMarket } from "../../models";
 import { environment } from "../../../environments/environment";
-import { BehaviorSubject, Observable } from "rxjs";
+import { BehaviorSubject, Observable, single } from "rxjs";
 
 export interface MessageMarketWS {
     // Subscribe to a singular market
@@ -15,13 +15,9 @@ export interface MessageMarketWS {
 export class WSocketCoinEx {
 
     private marketData$ = new BehaviorSubject<ResponseMarketInformation | null>(null);
-
     public messageSubs = signal<MessageMarketWS>({ method: '', params: { key: [""] }, id: 0 });
-
     private wsocket !: WebSocket;
-
     private url = environment.coinex.wsUrl;
-
     private id: number = 0;
 
     constructor() { }
@@ -56,6 +52,7 @@ export class WSocketCoinEx {
         }
 
         this.wsocket.onclose = (e) => {
+            // this.state.set(this.wsocket.readyState)
             console.log(e.wasClean); // true si la conexión se cerró limpiamente
             console.log(e.code); // código de cierre
         }
@@ -77,18 +74,20 @@ export class WSocketCoinEx {
         }
     }
 
-    public state(): string {
-        if (this.wsocket.OPEN) return 'Abierto';
-        if (this.wsocket.CLOSING) return 'Conectado';
-        if (this.wsocket.CLOSING) return 'Cerrando';
-        return 'Cerrado';
-    }
+    // public state(): string {
+    //     if (!this.wsocket) return '';
+    //     if (this.wsocket.OPEN) return 'Abierto';
+    //     if (this.wsocket.CLOSING) return 'Conectado';
+    //     if (this.wsocket.CLOSING) return 'Cerrando';
+    //     if (this.wsocket.CLOSED) return 'Cerrado';
+
+    //     return '';
+    // }
 
     public getMarketData$(): Observable<ResponseMarketInformation | null> {
-        {
-            return this.marketData$.asObservable();
-        }
+        return this.marketData$.asObservable();
     }
+
     // Metodos privados
 
     private async BlobToJsonObject(event: MessageEvent<any>): Promise<void> {

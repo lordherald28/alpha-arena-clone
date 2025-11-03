@@ -1,6 +1,6 @@
 // trading-service.interface.ts
 import { Observable } from 'rxjs';
-import { Candlestick, TradingOrder, Balance } from '../models'; // Asegúrate de que estos modelos estén definidos
+import { Candlestick, TradingOrder, Balance, TypeMarket } from '../models'; // Asegúrate de que estos modelos estén definidos
 import { Signal, signal } from '@angular/core';
 
 export interface ITradingService {
@@ -8,7 +8,7 @@ export interface ITradingService {
     // Propiedades necesarias
     // readonly currentPriceMarketSymbol: Signal<number>;
     // Para datos de mercado
-    getCandles(/* market: string, interval: string, limit: number */): Observable<Candlestick[]>;
+    getCandles(marketData: TypeMarket/* market: string, interval: string, limit: number */): Observable<Candlestick[]>;
 
     // Para información de la cuenta y trading (requieren autenticación)
     // getAccountBalance(): Observable<Balance[]>;

@@ -238,7 +238,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   // se maneja con los métodos más específicos de arriba.
 
   getCandles(): Observable<Candlestick[]> {
-    return this.serviceCoinex.getCandles();
+    return this.serviceCoinex.getCandles(this.marketData());
   }
 
   getAccountBalance(): Observable<any[]> {

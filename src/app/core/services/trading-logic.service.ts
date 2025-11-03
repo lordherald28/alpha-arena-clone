@@ -48,23 +48,31 @@ export class TradingLogicService {
   public startAnalysis(market?: TypeMarket): void {
     if (this.isRunning()) return;
 
-    // Se suscriba a wSocketCoinEx.getMarketData$() para recibir los datos en tiempo real.
-    if (market) {
-      // Error, primero las 1000 velas rest api y luego empieza el servicio de tiempo real.
-      this.wSocketCoinEx.connect(market);
-      this.subscripciones.push(this.wSocketCoinEx.getMarketData$().subscribe(data => {
-        if (data) {
-          // Aquí puedes manejar los datos recibidos en tiempo real
-          console.log('Datos de mercado en tiempo real:', data);
-          // Por el momento es un solo symbol [0], pero mas adelante se hara un Diccionario para pasarle el key del simbolo
-          this.storeApp.MarkInfo.set(data.data.state_list[0]);
-          this.storeApp.currentPrice.set(+data.data.state_list[0].mark_price);
-          console.log('Precio actual actualizado en storeApp: ', this.storeApp.currentPrice());
-        }
-      }));
-    }
+    const marketTYpe = this.storeApp.marketDataConfig();
+    if (marketTYpe) {
+      // 1 Conectarme al historico CoinEx Service
+      this.coinexService.getCandles(marketTYpe).subscribe((canldes) => {
+        // 2 una vez recibida las velas, me conecto al socket
+        console.log('🧑‍💻 Velas obtenidas: ', canldes);
+        if (canldes.length > 0) {
+          this.wSocketCoinEx.connect(marketTYpe);
+          // 3 nos subscribimos al wSocketCoinEx
+          this.wSocketCoinEx.getMarketData$().subscribe(data => {
+            // Obtenemos las data y actualizamos el almacen central la fuente de la verdad
+            if (data) {
+              this.isRunning.set(true);
+              this.storeApp.MarkInfo.set(data.data.state_list[0]);
+              this.storeApp.currentPrice.set(+data.data.state_list[0].mark_price);
+              console.log('Precio actual actualizado en storeApp: ', this.storeApp.currentPrice());
+              console.log('El Market Info de storeApp: ', this.storeApp.MarkInfo());
+              this.runAnalysisCycle(/* market */);
 
-    this.isRunning.set(true);
+            }
+          })
+        }
+      })
+    }
+    return
     // console.log('🧠 Iniciando análisis de mercado...', this.wSocketCoinEx.isConnected());
     // Ejecutar análisis inmediatamente y luego cada intervalo
     this.runAnalysisCycle(/* market */);
@@ -74,6 +82,30 @@ export class TradingLogicService {
       this.runAnalysisCycle();
     }));
   }
+
+  private connectWebSocket(marketType: TypeMarket): void {
+    console.log('🔌 Conectando WebSocket...');
+
+    // Conectar el WebSocket
+    this.wSocketCoinEx.connect(marketType);
+
+    // Suscribirse a los datos - IMPORTANTE: hacerlo fuera del callback de velas
+    this.wSocketCoinEx.getMarketData$().subscribe({
+      next: (markinfo) => {
+        if (markinfo) {
+          console.log('ℹ️🧑‍💻 Informacion en real: ', markinfo);
+          // Actualizar el store con la información en tiempo real
+          this.storeApp.MarkInfo.set(markinfo.data.state_list[0]);
+          this.storeApp.currentPrice.set(+markinfo.data.state_list[0].mark_price);
+
+          // 4. Solo aquí iniciar el análisis en tiempo real
+          // this.startRealtimeAnalysis();
+        }
+      },
+      error: (error) => console.error('❌ Error en WebSocket:', error)
+    });
+  }
+
 
   // En TradingLogicService   Estado, por el momento, solo se loguea en consola
   logTradingStatus(): void {
@@ -91,10 +123,10 @@ export class TradingLogicService {
   private runAnalysisCycle(/* market?: TypeMarket */): void {
     // console.log('🔄 Ejecutando ciclo de análisis...', new Date().toLocaleTimeString());
 
-    this.subscripciones.push(this.coinexService.getCandles().subscribe(candles => {
+    // this.subscripciones.push(this.coinexService.getCandles(this.storeApp.marketDataConfig()).subscribe(candles => {
       // this.candles.set(candles);
       // Me dijeron q los signal se trabajan mejor desde el store asi, no se si es verdad, pero se puede probar con encapsulamiento, metodo setCandlesData
-      this.storeApp.candles.set(candles);
+      // this.storeApp.candles.set(candles);
       // this.lastUpdate.set(new Date());
 
       // ✅ OBTENER PRECIO ACTUAL CORRECTAMENTE
@@ -106,12 +138,13 @@ export class TradingLogicService {
       const openPositions = this.storeApp.openOrders().length;
       const typeMarket = this.storeApp.marketDataConfig();
       const currentPrice = this.storeApp.currentPrice();
-
+      const candles = this.storeApp.candles();
+      
       if (openPositions === LIMI_OPEN_ORDERS) return void 0;
       // this.paperTrading.checkOrders(currentPrice);
 
       // 2. Análisis de IA
-
+      // return
       this.subscripciones.push(this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket).subscribe(aiResponse => {
 
         let aiResponseHistory = this.storeApp.aiResponseHistory();
@@ -125,7 +158,7 @@ export class TradingLogicService {
         // Ejecutar la decisión de trading con la condicion corto circuito, dime si est bien asi?
         currentPrice && this.paperTrading.processAIDecision(aiResponse, currentPrice); // no se si guardarlo en una variblae local el tradinglogic o usar el del storeApp directamente
       }));
-    }));
+    // }));
   }
 
   /**

@@ -52,8 +52,8 @@ export class PanelMarketSymbolComponent implements OnInit {
       { label: '3 Minutos', value: '3min' },
       { label: '15 Minutos', value: '15min' },
       { label: '30 Minutos', value: '30min' },
-      { label: '1 Hora', value: '1h' },
-      { label: '4 Horas', value: '4h' },
+      { label: '1 Hora', value: '1hour' },
+      { label: '4 Horas', value: '4hour' },
       { label: '1 Día', value: '1day' },
       { label: '1 Semana', value: '1week' }
     ]);
