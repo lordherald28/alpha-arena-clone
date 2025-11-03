@@ -19,7 +19,7 @@ import { ChartsComponent } from "../../shared/components/charts/charts/charts.co
     // TradingChartComponent, // TODO: Ver que hacer, eliminar
     // AiResponsePanelComponent, // TODO: Ver que hacer, componente list ai response panel
     PaperTradingDashboardComponent,
-    TestComponent,
+    // TestComponent,
     ChartsComponent
   ],
   templateUrl: './dashboard.component.html',

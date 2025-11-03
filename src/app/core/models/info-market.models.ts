@@ -1,6 +1,6 @@
 export interface ResponseMarketInformation {
     code: number;
-    data: state_list;
+    data: /* state_list |  */deal_list;
     message: string;
 }
 
@@ -23,4 +23,13 @@ export interface Market {
 
 export interface state_list {
     state_list: Market[];
+}
+export interface deal_list {
+    deal_list: {
+        amount: string;
+        created_at: number;
+        deal_id: number;
+        price: string
+        side: string
+    };
 }

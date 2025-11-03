@@ -22,7 +22,7 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
   private chart!: IChartApi;
   private candlestickSeries!: ISeriesApi<'Candlestick'>;
   private destroy$ = new Subject<void>();
-  
+
   // ✅ NUEVO: Control de estado para evitar scroll automático no deseado
   private previousCandlesLength = 0;
   public isUserInteracting = false;
@@ -43,8 +43,8 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
   private reactiveInputCandlesChart(): void {
     effect(() => {
       const currentCandles = this.candles();
-      console.log("📊 Efecto detectó velas:", currentCandles?.length || 0);
-
+      // console.log("📊 Efecto detectó velas:", currentCandles?.length || 0);
+      console.log('mercado: ', this.symbol()?.market)
       if (!currentCandles || currentCandles.length === 0 || !this.candlestickSeries) {
         return;
       }
@@ -55,11 +55,11 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
 
       if (currentLength !== this.previousCandlesLength) {
         // ✅ NUEVAS VELAS - usar setData
-        console.log('🔄 Número de velas cambió - usando setData');
+        // console.log('🔄 Número de velas cambió - usando setData');
         this.updateChartWithSetData(currentCandles);
       } else {
         // ✅ ACTUALIZACIÓN TIEMPO REAL - usar update (OPTIMIZADO)
-        console.log('⚡ Actualización tiempo real - usando update');
+        // console.log('⚡ Actualización tiempo real - usando update');
         this.updateLastCandle(lastCandle);
       }
 
@@ -118,8 +118,8 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
       priceScaleId: 'right',
       priceFormat: {
         type: 'price',
-        precision: 6,
-        minMove: 0.000001
+        precision: 4,
+        minMove: 0.0001
       }
     });
 
@@ -140,13 +140,13 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
           from: newRange.from as number,
           to: newRange.to as number
         };
-        
+
         // ✅ DETECTAR SI EL USUARIO ESTÁ INTERACTUANDO
         const currentTime = Date.now() / 1000;
         const isAtEnd = Math.abs(currentTime - (newRange.to as number)) < 300; // 5 minutos del final
         this.isUserInteracting = !isAtEnd;
-        
-        console.log('🎯 Usuario interactuando:', !isAtEnd, 'Rango:', newRange);
+
+        // console.log('🎯 Usuario interactuando:', !isAtEnd, 'Rango:', newRange);
       }
     });
 
@@ -162,7 +162,7 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
   private updateChartWithSetData(candles: Candlestick[]): void {
     try {
       const chartData = candles.map(c => ({
-        time: (c.timestamp / 1000) as Time,
+        time: (c.timestamp / 1000) as Time, // UNIX seconds
         open: c.open,
         high: c.high,
         low: c.low,
@@ -170,17 +170,16 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
       }));
 
       this.candlestickSeries.setData(chartData);
-      
-      // ✅ SOLO AJUSTAR EL RANGO INICIALMENTE, NO SIEMPRE
+
       if (chartData.length > 0 && !this.lastVisibleRange) {
-        // Mostrar las últimas 100 velas inicialmente
         const startIndex = Math.max(0, chartData.length - 100);
         this.chart.timeScale().setVisibleRange({
           from: chartData[startIndex].time as Time,
           to: chartData[chartData.length - 1].time as Time
         });
+        // this.chart.timeScale().scrollToRealTime(); // seguir el final
       }
-      
+
       console.log('✅ setData() - Actualizadas', candles.length, 'velas');
     } catch (error) {
       console.error('❌ Error en setData:', error);
@@ -189,27 +188,24 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
 
   private updateLastCandle(lastCandle: Candlestick): void {
     try {
-      const chartCandle = {
-        time: (lastCandle.timestamp / 1000) as Time,
+      this.candlestickSeries.update({
+        time: (lastCandle.timestamp / 1000) as Time, // UNIX seconds
         open: lastCandle.open,
         high: lastCandle.high,
         low: lastCandle.low,
         close: lastCandle.close
-      };
+      });
 
-      // ✅ USAR UPDATE PARA OPTIMIZAR (solo actualiza 1 vela)
-      this.candlestickSeries.update(chartCandle);
-      
-      // ✅ SCROLL AUTOMÁTICO SOLO SI EL USUARIO NO ESTÁ INTERACTUANDO
-      if (!this.isUserInteracting) {
-        this.chart.timeScale().scrollToPosition(5, false); // ✅ 5 velas de margen
-      }
-      
+      // if (!this.isUserInteracting) {
+      //   this.chart.timeScale().scrollToRealTime();
+      // }
+
       console.log('⚡ update() - Vela actualizada:', lastCandle.close, 'Usuario interactuando:', this.isUserInteracting);
     } catch (error) {
       console.error('❌ Error en update:', error);
     }
   }
+
 
   // ✅ NUEVO: Método para resetear el zoom y seguir el precio actual
   public resetZoomAndFollow(): void {
@@ -229,7 +225,7 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
         from: chartData[startIndex].time as Time,
         to: chartData[chartData.length - 1].time as Time
       });
-      
+
       this.isUserInteracting = false;
     }
   }

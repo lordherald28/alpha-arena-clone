@@ -1,7 +1,6 @@
 // services/trading-logic.service.ts
 import { inject, Inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
-
 import { GlmAiGeneralService } from './ai-analysis/gml-ai-general.service';
 import { Candlestick, TypeMarket } from '../models';
 import { ITradingService } from '../base/trading-service.interface';
@@ -10,168 +9,140 @@ import { StoreAppService } from '../store/store-app.service';
 import { WSocketCoinEx } from './coinex/ws-coinex.service';
 import { LIMI_OPEN_ORDERS } from '../utils/const.utils';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class TradingLogicService {
-
-  //Inject 
   private readonly paperTrading = inject(PaperTradingService);
   private readonly wSocketCoinEx = inject(WSocketCoinEx);
   private readonly storeApp = inject(StoreAppService);
+  private hb?: any;
 
-  // Signals para el estado reactivo (MANTENER lo que ya funciona)
   public isRunning = signal<boolean>(false);
+  public tradingStatus = signal({ active: false, lastOrder: null as string | null, totalTrades: 0 });
 
-  // ✅ NUEVO: Signal para el estado de trading
-  public tradingStatus = signal<{
-    active: boolean;
-    lastOrder: string | null;
-    totalTrades: number;
-  }>({
-    active: false,
-    lastOrder: null,
-    totalTrades: 0
-  });
-
-  private subscripciones = new Array<Subscription>();
+  private subscripciones: Subscription[] = [];
 
   constructor(
-    @Inject('ITradingService')
-    private coinexService: ITradingService,
+    @Inject('ITradingService') private coinexService: ITradingService,
     private glmAiService: GlmAiGeneralService
   ) { }
 
-  /**
-   * Iniciar análisis (SOLO análisis, NO ejecución)
-   */
-  public startAnalysis(market?: TypeMarket): void {
+  public startAnalysis(): void {
     if (this.isRunning()) return;
+    const cfg = this.storeApp.marketDataConfig();
+    const ivMs = this.intervalToMs(cfg.interval);
 
-    const marketTYpe = this.storeApp.marketDataConfig();
-    if (marketTYpe) {
-      // 1 Conectarme al historico CoinEx Service
-      this.coinexService.getCandles(marketTYpe).subscribe((canldes) => {
-        // 2 una vez recibida las velas, me conecto al socket
-        if (canldes.length > 0) {
-          // 3 ACtualizar el store app
-          this.storeApp.candles.set(canldes);
-          this.wSocketCoinEx.connect(marketTYpe);
-          // 3 nos subscribimos al wSocketCoinEx
-          // En TradingLogicService - MODIFICAR el WebSocket subscription
-          this.wSocketCoinEx.getMarketData$().subscribe(data => {
-            if (data && data.data && data.data.state_list[0]) {
-              const marketData = data.data.state_list[0];
+    this.coinexService.getCandles(cfg).subscribe(hist => {
+      if (!hist.length) return;
+      this.storeApp.candles.set(hist);
 
-              // 1. Actualizar precio actual y la informacion del mercado
-              this.storeApp.currentPrice.set(+marketData.mark_price);
-              this.storeApp.MarkInfo.set(data.data.state_list[0]);
-              // 2. ✅ CREAR VELA EN TIEMPO REAL
-              const newCandle: Candlestick = {
-                timestamp: Date.now(), // O usa el timestamp del WebSocket si está disponible
-                open: +marketData.open,
-                high: +marketData.high,
-                low: +marketData.low,
-                close: +marketData.mark_price,
-                volume: +marketData.volume
-              };
+      // --- conectar WS trades ---
+      this.wSocketCoinEx.connect(cfg);
+      this.wSocketCoinEx.getDeals$().subscribe(msg => {
+        const list = msg?.data?.deal_list;
+        if (!list?.length) return;
 
-              // 3. ✅ ACTUALIZAR STORE CON MÉTODO DE TIEMPO REAL
-              this.storeApp.updateRealtimeCandle(newCandle);
+        // ordenar por tiempo
+        const trades = [...list].sort((a, b) => a.created_at - b.created_at);
 
-              // 4. Actualizar el isRunning a true
-              this.isRunning.set(true);
+        for (const t of trades) {
+          const price = +t.price;
+          const ts = t.created_at;               // ms del servidor
+          const bucket = ts - (ts % ivMs);       // inicio del periodo
 
-              console.log('🔄 Vela actualizada en tiempo real:', newCandle);
-            }
-          });
+          this.storeApp.currentPrice.set(price);
+
+          this.storeApp.updateRealtimeCandle({
+            timestamp: bucket,
+            open: price, high: price, low: price, close: price,
+            volume: +t.amount,
+          }, ivMs); // <-- pásale el periodo
         }
-      })
-    }
-    // Ejecutar análisis inmediatamente y luego cada intervalo
-    // this.runAnalysisCycle(/* market */);
-    // ✅ HABILITAR TRADING AUTOMÁTICO AL INICIAR
+        this.isRunning.set(true);
+      });
+
+      // --- latido para continuidad de velas ---
+      this.startBarHeartbeat(ivMs);
+    });
+
+    // Obtener el market Info
+    this.wSocketCoinEx.getMarketState$().subscribe(msg => {
+      if (msg) {
+        this.storeApp.MarkInfo.set(msg.data.state_list[0])
+      }
+    });
+
     this.enableAutoTrading();
   }
 
-  // En TradingLogicService   Estado, por el momento, solo se loguea en consola
-  logTradingStatus(): void {
-    console.log('🔍 Estado del trading automático:', {
-      autoTrading: this.paperTrading.getAutoTradingStatus(),
-      isRunning: this.isRunning(),
-      openOrders: this.storeApp.openOrders().length,
-      balance: this.storeApp.paperBalance()
-    });
+  // —— Helpers
+  private intervalToMs(iv: string): number {
+    // parser genérico: 1m, 3m, 45m, 2h, 1d, 1w
+    const m = iv.trim().toLowerCase().match(/^(\d+)\s*([mhdw])$/);
+    if (!m) return 60_000;
+    const n = Number(m[1]);
+    switch (m[2]) {
+      case 'm': return n * 60_000;
+      case 'h': return n * 3_600_000;
+      case 'd': return n * 86_400_000;
+      case 'w': return n * 604_800_000;
+      default: return 60_000;
+    }
   }
 
-  /**
-   * Ciclo de análisis (SOLO análisis)
-   */
-  private runAnalysisCycle(/* market?: TypeMarket */): void {
-    // console.log('🔄 Ejecutando ciclo de análisis...', new Date().toLocaleTimeString());
-
-    // this.subscripciones.push(this.coinexService.getCandles(this.storeApp.marketDataConfig()).subscribe(candles => {
-    // this.candles.set(candles);
-    // Me dijeron q los signal se trabajan mejor desde el store asi, no se si es verdad, pero se puede probar con encapsulamiento, metodo setCandlesData
-    // this.storeApp.candles.set(candles);
-    // this.lastUpdate.set(new Date());
-
-    // ✅ OBTENER PRECIO ACTUAL CORRECTAMENTE
-    // const currentPrice = candles[candles.length - 1].close;
-    // console.log(`💰 Precio actual: ${this.currentPrice()}`);
-
-    // 1. Primero verificar y cerrar órdenes existentes, cerrar no, evitar limite de ordenes abiertas, asi evitamos llamar a la IA
+  // —— Análisis con IA (sin cambios)
+  private runAnalysisCycle(): void {
     const accountBalance = this.storeApp.paperBalance().USDT;
     const openPositions = this.storeApp.openOrders().length;
+    if (openPositions === LIMI_OPEN_ORDERS) return;
+
     const typeMarket = this.storeApp.marketDataConfig();
     const currentPrice = this.storeApp.currentPrice();
     const candles = this.storeApp.candles();
 
-    if (openPositions === LIMI_OPEN_ORDERS) return void 0;
-    // this.paperTrading.checkOrders(currentPrice);
-
-    // 2. Análisis de IA
-    // return
-    this.subscripciones.push(this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket).subscribe(aiResponse => {
-
-      let aiResponseHistory = this.storeApp.aiResponseHistory();
-      aiResponseHistory.unshift(aiResponse);
-      this.storeApp.aiResponseHistory.set(aiResponseHistory);
-
-      console.log('🧠 Decisión de IA:', aiResponse);
-
-      // ✅ ENVIAR DECISIÓN CON PRECIO ACTUAL
-
-      // Ejecutar la decisión de trading con la condicion corto circuito, dime si est bien asi?
-      currentPrice && this.paperTrading.processAIDecision(aiResponse, currentPrice); // no se si guardarlo en una variblae local el tradinglogic o usar el del storeApp directamente
-    }));
-    // }));
+    this.subscripciones.push(
+      this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket)
+        .subscribe(aiResponse => {
+          const hist = this.storeApp.aiResponseHistory();
+          this.storeApp.aiResponseHistory.set([aiResponse, ...hist]);
+          if (currentPrice) this.paperTrading.processAIDecision(aiResponse, currentPrice);
+        })
+    );
   }
 
-  /**
-   * Métodos de control del trading automático
-   */
-  enableAutoTrading(): void {
-    this.paperTrading.setAutoTrading(true);
-    // console.log('🚀 Trading automático ACTIVADO');
+  enableAutoTrading(): void { this.paperTrading.setAutoTrading(true); }
+  disableAutoTrading(): void { this.paperTrading.setAutoTrading(false); }
+
+  private startBarHeartbeat(ivMs: number) {
+    clearInterval(this.hb);
+    this.hb = setInterval(() => {
+      const arr = this.storeApp.candles();
+      if (!arr.length) return;
+
+      const last = arr[arr.length - 1];
+      const now = Date.now();                        // o usa server.time si quieres precisión
+      const lastBucket = Math.floor(last.timestamp / ivMs);
+      const nowBucket = Math.floor(now / ivMs);
+
+      // si cruzamos a uno o más buckets sin trades, crea velas "vacías"
+      for (let b = lastBucket + 1; b <= nowBucket; b++) {
+        const ts = b * ivMs;
+        const px = last.close;
+        this.storeApp.updateRealtimeCandle({
+          timestamp: ts,
+          open: px, high: px, low: px, close: px,
+          volume: 0
+        }, ivMs);
+      }
+    }, 1000);
   }
 
-  disableAutoTrading(): void {
-    this.paperTrading.setAutoTrading(false);
-    console.log('🛑 Trading automático DESACTIVADO');
-  }
-
-  public stopAnalysis(market?: TypeMarket): void {
+  public stopAnalysis(/* m?: TypeMarket */): void {
+    const m = this.storeApp.marketDataConfig();
     if (!this.isRunning()) return;
-
-    // UnSubscribers
-    if (this.subscripciones.length > 0) {
-      this.subscripciones.forEach((sub) => sub.unsubscribe())
-    }
-
-    this.wSocketCoinEx.disconnect(market!);
+    this.subscripciones.forEach(s => s.unsubscribe());
+    clearInterval(this.hb);
+    this.wSocketCoinEx.disconnect(m!);
     this.isRunning.set(false);
-    console.log('Análisis de trading detenido.');
   }
 
 }

@@ -1,5 +1,6 @@
 <div class="chart-wrapper">
   <div class="chart-header">
+    <span>Simbolo: {{symbol()?.market}}</span>
     <h3>Gráfico de Trading - {{ symbol()?.market || 'LINKUSDT' }}</h3>
     <button class="follow-btn" (click)="resetZoomAndFollow()">
       {{ isUserInteracting ? '🔒 Seguir Precio' : '🔓 Siguiendo' }}
@@ -7,7 +8,7 @@
   </div>
 
   <div class="chart-info">
-    <span>Velas cargadas: {{ candles()?.length || 0 }}</span>
+    <!-- <span>Velas cargadas: {{ candles()?.length || 0 }}</span> -->
     <span>Estado: {{ isUserInteracting ? 'Manual' : 'Automático' }}</span>
   </div>
 

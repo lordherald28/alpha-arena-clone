@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { WSocketCoinEx } from '../../../core/services/coinex/ws-coinex.service';
+// import { WSocketCoinEx } from '../../../core/services/coinex/ws-coinex.service.ts_backup';
 import { StoreAppService } from '../../../core/store/store-app.service';
 
 
@@ -16,7 +16,7 @@ import { StoreAppService } from '../../../core/store/store-app.service';
 export class TestComponent implements OnInit {
 
 
-  private ws = inject(WSocketCoinEx);
+  // private ws = inject(WSocketCoinEx);
   private StoreAppService = inject(StoreAppService)
   private readonly marketInfo = computed(() => this.StoreAppService.marketDataConfig())
 
@@ -27,7 +27,7 @@ export class TestComponent implements OnInit {
   }
 
   onConn(): void {
-    this.ws.connect(this.marketInfo());
+    // this.ws.connect(this.marketInfo());
   }
 
   onState() {
@@ -35,6 +35,6 @@ export class TestComponent implements OnInit {
   }
 
   onDesc() {
-    this.ws.disconnect(this.marketInfo());
+    // this.ws.disconnect(this.marketInfo());
   }
 }

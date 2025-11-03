@@ -1,132 +1,153 @@
-import { computed, effect, inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { AiResponse, Balance, Candlestick, Market, TradingOrder, TypeMarket } from '../models';
+// src/app/core/store/store-app.service.ts
+import { Injectable, computed, effect, inject, signal, WritableSignal } from '@angular/core';
+import { AiResponse, Candlestick, Market, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
-import { KEY_MARKET_CONFIG_DATA } from '../utils/const.utils';
 import { BalanceService } from '../services/helpers/trading/balance.service';
 import { OrderManagerService } from '../services/helpers/trading/order-manager.service';
+import { KEY_MARKET_CONFIG_DATA } from '../utils/const.utils';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class StoreAppService {
 
-  // Inject
-  // ✅ Inyecta el servicio del core
+  // Servicios de dominio
   private readonly balanceService = inject(BalanceService);
   private readonly orderManagerService = inject(OrderManagerService);
 
-  // Lo hice puglico ya q es un signal y se va a utilizar en toda la App, tu me diras.
+  // Config del mercado
   public readonly marketDataConfig = signal<TypeMarket>({
     interval: environment.trading.interval,
     market: environment.trading.pair,
     limit: environment.trading.candleLimit
   });
 
-  public readonly MarkInfo = signal<Market | null>(null); // Lo hice puglico ya q es un signal y se va a utilizar en toda la App, tu me diras.
+  public readonly MarkInfo = signal<Market | null>(null);
 
-  // TODO: Nuevas variables refactorizadas
-  public readonly candles = signal<Candlestick[]>([]); // (las velas históricas y actualizadas)
-  public readonly currentPrice = signal<number>(0); // (el precio en tiempo real)
-  public readonly paperBalance = computed(() => this.balanceService.balance()); // (el balance de paper trading)
+  // Estado principal
+  public readonly candles = signal<Candlestick[]>([]);
+  public readonly currentPrice = signal<number>(0);
+  public readonly paperBalance = computed(() => this.balanceService.balance());
 
   public readonly openOrders = computed(() => this.orderManagerService.openOrders());
   public readonly closedOrders = computed(() => this.orderManagerService.closedOrders());
   public readonly ordersHistory = computed(() => this.orderManagerService.orderHistory());
 
-  public readonly aiResponseHistory = signal<AiResponse[]>([]); // (historial de respuestas de la IA) / Para tener trazabilidad de la misma y ver una si se desea en la UI
-  public readonly isLoading = signal<boolean>(false); // Si esta cargando, tema Spiner en UI
-
-
+  public readonly aiResponseHistory = signal<AiResponse[]>([]);
+  public readonly isLoading = signal<boolean>(false);
 
   constructor() {
     this.loadDataMarket();
     this.saveDataMarket();
-
-    effect(() => {
-      if (this.MarkInfo()) {
-        console.log('Symbol cambiado: ', this.MarkInfo()?.market);
-        console.log(`Precio del ${this.MarkInfo()?.market} $: `, this.MarkInfo()?.mark_price);
-      }
-    })
   }
 
-  /**
-   * @description Devolver el market config 
-   * @returns 
-   */
-  getDataMarket(): TypeMarket {
-    return this.marketDataConfig();
-  }
+  // ---- Getters/Setters básicos ----
+  getDataMarket(): TypeMarket { return this.marketDataConfig(); }
+  getSignalMarket() { return this.marketDataConfig; }
+  getMarkInfo(): WritableSignal<Market | null> { return this.MarkInfo; }
+  setMarkInfo(m: Market): void { this.MarkInfo.set(m); }
+  setDataMarket(m: TypeMarket): void { this.marketDataConfig.set(m); }
 
-  getSignalMarket() {
-    return this.marketDataConfig;
-  }
+  // ---- Tiempo real: agrega/actualiza sin romper el orden ----
+  updateRealtimeCandle(bar: Candlestick, ivMs?: number): void {
+    const period = ivMs ?? this.intervalToMs(this.marketDataConfig().interval);
+    const arr = this.candles();
+    if (!arr.length) { this.candles.set([bar]); return; }
 
-  getMarkInfo(): WritableSignal<Market | null> {
-    return this.MarkInfo;
-  }
+    const last = arr[arr.length - 1];
+    const sameBucket =
+      Math.floor(last.timestamp / period) === Math.floor(bar.timestamp / period);
 
-  setMarkInfo(Market: Market): void {
-    this.MarkInfo.set(Market);
-  }
-
-  /**
-   * 
-   */
-  setDataMarket(marketData: TypeMarket): void {
-    this.marketDataConfig.set(marketData);
-  }
-
-  // ✅ NUEVO: Método para actualizar vela en tiempo real
-  updateRealtimeCandle(newCandle: Candlestick): void {
-    const currentCandles = this.candles();
-
-    if (currentCandles.length === 0) {
-      this.candles.set([newCandle]);
+    if (sameBucket) {
+      const up = {
+        ...last,
+        high: Math.max(last.high, bar.high),
+        low: Math.min(last.low, bar.low),
+        close: bar.close,
+        volume: (last.volume ?? 0) + (bar.volume ?? 0),
+      };
+      const copy = [...arr]; copy[copy.length - 1] = up;
+      this.candles.set(copy);
       return;
     }
 
-    const lastCandle = currentCandles[currentCandles.length - 1];
-    const isSameTimePeriod = this.isSameCandlePeriod(lastCandle, newCandle);
+    // evita desorden: ignora buckets viejos
+    if (bar.timestamp <= last.timestamp) return;
 
-    if (isSameTimePeriod) {
-      // ✅ ACTUALIZAR última vela existente
-      const updatedCandles = [...currentCandles];
-      updatedCandles[updatedCandles.length - 1] = {
-        ...lastCandle,
-        high: Math.max(lastCandle.high, newCandle.high),
-        low: Math.min(lastCandle.low, newCandle.low),
-        close: newCandle.close
+    this.candles.set([...arr, bar]);
+  }
+  // ---- Utilidades ----
+  isSameCandlePeriod(a: Candlestick, b: Candlestick): boolean {
+    const bucket = this.intervalToMs(this.marketDataConfig().interval);
+    return Math.floor(a.timestamp / bucket) === Math.floor(b.timestamp / bucket);
+  }
+
+  updateRealtimeCandlePadded(newCandle: Candlestick, ivMs: number): void {
+    const arr = this.candles();
+    if (arr.length === 0) { this.candles.set([newCandle]); return; }
+
+    const last = arr[arr.length - 1];
+
+    // mismo bucket → merge
+    if (newCandle.timestamp === last.timestamp) {
+      const up = {
+        ...last,
+        high: Math.max(last.high, newCandle.high),
+        low: Math.min(last.low, newCandle.low),
+        close: newCandle.close,
+        volume: (last.volume ?? 0) + (newCandle.volume ?? 0)
       };
-      this.candles.set(updatedCandles);
-    } else {
-      // ✅ AGREGAR nueva vela
-      this.candles.set([...currentCandles, newCandle]);
+      const copy = [...arr]; copy[copy.length - 1] = up;
+      this.candles.set(copy);
+      return;
     }
+
+    // si el trade cae en un bucket posterior → rellena buckets vacíos
+    if (newCandle.timestamp > last.timestamp) {
+      const copy = [...arr];
+      let t = last.timestamp + ivMs;
+      while (t < newCandle.timestamp) {
+        const c = last.close;
+        copy.push({ timestamp: t, open: c, high: c, low: c, close: c, volume: 0 });
+        t += ivMs;
+      }
+      copy.push(newCandle);
+      this.candles.set(copy);
+    }
+    // si viene atrasado, lo ignoras para no romper el orden asc.
   }
 
-  // ✅ NUEVO: Determinar si es el mismo período de vela
-  private isSameCandlePeriod(candle1: Candlestick, candle2: Candlestick): boolean {
-    // Asumiendo velas de 5 minutos - ajusta según tu timeframe
-    const time1 = Math.floor(candle1.timestamp / (5 * 60 * 1000));
-    const time2 = Math.floor(candle2.timestamp / (5 * 60 * 1000));
-    return time1 === time2;
+  private normalizeCandle(c: Candlestick): Candlestick {
+    // asegura OHLC coherente si viene solo con precio
+    const open = c.open ?? c.close;
+    const close = c.close ?? open;
+    const high = c.high ?? Math.max(open, close);
+    const low = c.low ?? Math.min(open, close);
+    const volume = c.volume ?? 0;
+    return { timestamp: c.timestamp, open, high, low, close, volume };
   }
 
+  private alignToBucket(tsMs: number, bucketMs: number): number {
+    return tsMs - (tsMs % bucketMs);
+  }
+
+  private intervalToMs(iv: string): number {
+    const m: Record<string, number> = {
+      '1m': 60_000, '3m': 180_000, '5m': 300_000, '15m': 900_000,
+      '30m': 1_800_000, '1h': 3_600_000, '4h': 14_400_000, '1d': 86_400_000,
+    };
+    return m[iv] ?? 60_000;
+  }
+
+  // ---- Persistencia de config ----
   private loadDataMarket(): void {
-    if (localStorage.getItem(KEY_MARKET_CONFIG_DATA)) {
-      const config_market = localStorage.getItem(KEY_MARKET_CONFIG_DATA)
-      this.marketDataConfig.set(config_market ? JSON.parse(config_market) : {
-        interval: environment.trading.interval,
-        market: environment.trading.pair,
-        limit: environment.trading.candleLimit
-      });
+    const raw = localStorage.getItem(KEY_MARKET_CONFIG_DATA);
+    if (raw) {
+      try { this.marketDataConfig.set(JSON.parse(raw)); } catch { }
     }
   }
 
   private saveDataMarket(): void {
     effect(() => {
       localStorage.setItem(KEY_MARKET_CONFIG_DATA, JSON.stringify(this.marketDataConfig()));
-    })
+    });
   }
 }

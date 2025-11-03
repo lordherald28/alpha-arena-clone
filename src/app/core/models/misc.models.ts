@@ -7,6 +7,7 @@ export const validIntervals = [
 export const ActionSubsWS = {
     subscribe: 'state.subscribe',
     unsubscribe: 'state.unsubscribe',
+    dealsubscribe: 'deals.subscribe'
 } as const;
 
 export type ActionSubsWSType = typeof ActionSubsWS[keyof typeof ActionSubsWS];
