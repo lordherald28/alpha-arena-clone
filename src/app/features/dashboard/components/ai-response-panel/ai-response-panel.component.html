@@ -1,22 +1,26 @@
 <div class="panel">
   <h3>Respuesta de la IA (GLM-4)</h3>
-  @if (aiResponse(); as response) {
-    <div class="response-summary">
-      <div class="decision" [class.buy]="response.decision === 'BUY'" [class.sell]="response.decision === 'SELL'" [class.hold]="response.decision === 'HOLD'">
-        Decisión: <strong>{{ response.decision }}</strong>
-      </div>
-      <div class="confidence">
-        Confianza: {{ (response.confidence * 100).toFixed(1) }}%
-      </div>
-      <div class="reason">
-        <strong>Razón:</strong> {{ response.reason }}
-      </div>
+  @if (aiResponseHist().length > 0) {
+  @for (item of aiResponseHist(); track item) {
+  <div class="response-summary">
+    <div class="decision" [class.buy]="item.decision === 'BUY'" [class.sell]="item.decision === 'SELL'"
+      [class.hold]="item.decision === 'HOLD'">
+      Decisión: <strong>{{ item.decision }}</strong>
     </div>
-    <details class="json-details">
-      <summary>Respuesta JSON Cruda</summary>
-      <pre>{{ response.rawJson | json }}</pre>
-    </details>
+    <div class="confidence">
+      Confianza: {{ (item.confidence * 100).toFixed(1) }}%
+    </div>
+    <div class="reason">
+      <strong>Razón:</strong> {{ item.reason }}
+    </div>
+  </div>
+  <details class="json-details">
+    <summary>Respuesta JSON Cruda</summary>
+    <pre>{{ item.rawJson | json }}</pre>
+  </details>
+  }
+
   } @else {
-    <p>Esperando análisis de la IA...</p>
+  <p>Esperando análisis de la IA...</p>
   }
 </div>

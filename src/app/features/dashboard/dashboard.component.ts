@@ -17,11 +17,12 @@ import { ChartsComponent } from "../../shared/components/charts/charts/charts.co
     CommonModule,
     // ControlPanelComponent,
     // TradingChartComponent, // TODO: Ver que hacer, eliminar
-    // AiResponsePanelComponent, // TODO: Ver que hacer, componente list ai response panel
+    AiResponsePanelComponent, // TODO: Ver que hacer, componente list ai response panel
     PaperTradingDashboardComponent,
     // TestComponent,
-    ChartsComponent
-  ],
+    ChartsComponent,
+    AiResponsePanelComponent
+],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })

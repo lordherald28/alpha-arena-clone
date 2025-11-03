@@ -26,7 +26,10 @@ export const environment = {
         defaultRisk: 0.05
     },
     glmAi: {
-        apiKey: '60e5e8e0f4b34c64b23b59f1e646ed26.IPUU0FrsM6HJTXQF',
-        baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+        apiKey: '7b9ad9add7af400e8f600a6e9c240934.S5BbL9Xq7S7vdMHN',
+        baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        localUrl:'http://localhost:11434/api'
     }
 };
+    // private url = 'http://localhost:11434/api/generate'; // o proxy /ollama/api/generate
+    // private model = 'llama3:latest';

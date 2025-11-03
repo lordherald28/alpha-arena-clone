@@ -22,6 +22,7 @@ export class GlmAiGeneralService {
     private apiUrl = environment.production ? envProd.glmAi.baseUrl : environment.glmAi.baseUrl;
 
     public analyzeMarket(candles: Candlestick[], accountBalance: number, openPositions: number, typeMarket: TypeMarket): Observable<AiResponse> {
+
         const prompt = this.generatePrompt.buildPrompt(candles, accountBalance, openPositions, typeMarket);
 
         // Si hay error en los cálculos, retornar HOLD inmediatamente

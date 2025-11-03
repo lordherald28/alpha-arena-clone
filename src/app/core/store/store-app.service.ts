@@ -1,6 +1,6 @@
 // src/app/core/store/store-app.service.ts
 import { Injectable, computed, effect, inject, signal, WritableSignal } from '@angular/core';
-import { AiResponse, Candlestick, Market, TypeMarket } from '../models';
+import { AiResponse, Candlestick, Market, OllamaTradingResponse, TypeMarket } from '../models';
 import { environment } from '../../environments/environment';
 import { BalanceService } from '../services/helpers/trading/balance.service';
 import { OrderManagerService } from '../services/helpers/trading/order-manager.service';

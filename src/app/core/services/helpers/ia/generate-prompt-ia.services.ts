@@ -19,7 +19,7 @@ export class GenerateServicePrompt {
         marketConfig: TypeMarket
     ): string {
 
-
+      console.log('desde la ia: ', candles)
         if (candles.length < 200) {
             return "No hay suficientes velas para realizar un análisis completo. Proporciona al menos 200 velas.";
         }
