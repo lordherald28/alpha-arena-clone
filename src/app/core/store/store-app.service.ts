@@ -23,6 +23,8 @@ export class StoreAppService {
   public readonly MarkInfo = signal<Market | null>(null);
 
   // Estado principal
+  public isLoadedAnalysis = signal<boolean>(false);
+
   public readonly candles = signal<Candlestick[]>([]);
   public readonly currentPrice = signal<number>(0);
   public readonly paperBalance = computed(() => this.balanceService.balance());
@@ -45,6 +47,8 @@ export class StoreAppService {
   getMarkInfo(): WritableSignal<Market | null> { return this.MarkInfo; }
   setMarkInfo(m: Market): void { this.MarkInfo.set(m); }
   setDataMarket(m: TypeMarket): void { this.marketDataConfig.set(m); }
+  getIsLoadedAnalysis(): boolean { return this.isLoadedAnalysis() };
+  setIsLoadedAnalysis(value: boolean): void { this.isLoadedAnalysis.set(value) };
 
   // ---- Tiempo real: agrega/actualiza sin romper el orden ----
   updateRealtimeCandle(bar: Candlestick, ivMs?: number): void {
@@ -113,6 +117,16 @@ export class StoreAppService {
       this.candles.set(copy);
     }
     // si viene atrasado, lo ignoras para no romper el orden asc.
+  }
+
+  resetForMarket(newCfg: TypeMarket): void {
+    // this.isLoading.set(true);
+    this.marketDataConfig.set(newCfg);
+    this.candles.set([]);           // limpia histórico
+    this.currentPrice.set(0);
+    this.MarkInfo.set(null);
+    // this.aiResponseHistory.set([]);
+    this.isLoading.set(false);
   }
 
   private normalizeCandle(c: Candlestick): Candlestick {

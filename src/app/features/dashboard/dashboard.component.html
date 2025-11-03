@@ -9,13 +9,13 @@
     </div>
   </header>
 
-  <div class="control-section">
+  <!-- <div class="control-section">
     <app-control-panel (start)="startAnalysis()" (stop)="stopAnalysis()"></app-control-panel>
-  </div>
+  </div> -->
 
   <div class="main-content">
     <section class="chart-section">
-      <app-charts [candles]="candles()" [symbol]="marketInfo()!"></app-charts>
+      <app-charts [candles]="candles()" [symbol]="marketInfo()!" [currentPrice]="currentPrice()!" ></app-charts>
       <!-- <app-trading-chart ></app-trading-chart> -->
       <!-- <app-orden-list ></app-orden-list> -->
       <!-- <app-test></app-test> -->

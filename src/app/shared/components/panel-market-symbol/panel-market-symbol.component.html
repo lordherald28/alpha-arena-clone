@@ -1,10 +1,10 @@
 <div class="trading-controls-container">
-  <button (click)="oncAcceptConfMarket()">Guardar</button>
+  <button (click)="oncAcceptConfMarket()" [disabled]="isSelectDisabled()">Guardar</button>
   <!-- Selector de Pares de Criptomonedas -->
   <div class="control-group">
     <label for="crypto-pair-select">Par:</label>
     <select id="crypto-pair-select" [formControl]="pairControl">
-      <option value="" selected>Seleccionar par</option>
+      <option value="" selected disabled>Seleccionar par</option>
       @for (item of cryptoPairs(); track item) {
       <!-- ✅ CORREGIDO: Usar la variable item, no el string 'item' -->
       <option [value]="item">{{ item }}</option>

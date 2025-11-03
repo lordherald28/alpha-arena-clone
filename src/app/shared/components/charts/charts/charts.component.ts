@@ -1,21 +1,31 @@
-import { Component, input, effect, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, input, effect, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Candlestick, Market } from '../../../../core/models';
 import { CandlestickSeries, createChart, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { Subject } from 'rxjs';
+import { ControlPanelComponent } from "../../../../features/dashboard/components/control-panel/control-panel.component";
+import { TradingLogicService } from '../../../../core/services/trading-logic.service';
+import { StoreAppService } from '../../../../core/store/store-app.service';
 
 @Component({
   selector: 'app-charts',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ControlPanelComponent],
   templateUrl: './charts.component.html',
   styleUrls: ['./charts.component.scss']
 })
 export class ChartsComponent implements AfterViewInit, OnDestroy {
 
+  // Inject
+  private readonly tradingLogic = inject<TradingLogicService>(TradingLogicService);
+  private readonly storeApp = inject<StoreAppService>(StoreAppService);
+
+  public isLoadAnalysis = computed(() => this.storeApp.getIsLoadedAnalysis());
+  
   // ✅ INPUT REACTIVO
   public candles = input<Candlestick[]>([]);
   public symbol = input<Market>();
+  public currentPrice = input<number>(0);
 
   // Chart
   @ViewChild('chartContainer') chartContainer!: ElementRef;
@@ -43,8 +53,6 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
   private reactiveInputCandlesChart(): void {
     effect(() => {
       const currentCandles = this.candles();
-      // console.log("📊 Efecto detectó velas:", currentCandles?.length || 0);
-      console.log('mercado: ', this.symbol()?.market)
       if (!currentCandles || currentCandles.length === 0 || !this.candlestickSeries) {
         return;
       }
@@ -55,11 +63,9 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
 
       if (currentLength !== this.previousCandlesLength) {
         // ✅ NUEVAS VELAS - usar setData
-        // console.log('🔄 Número de velas cambió - usando setData');
         this.updateChartWithSetData(currentCandles);
       } else {
         // ✅ ACTUALIZACIÓN TIEMPO REAL - usar update (OPTIMIZADO)
-        // console.log('⚡ Actualización tiempo real - usando update');
         this.updateLastCandle(lastCandle);
       }
 
@@ -146,7 +152,6 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
         const isAtEnd = Math.abs(currentTime - (newRange.to as number)) < 300; // 5 minutos del final
         this.isUserInteracting = !isAtEnd;
 
-        // console.log('🎯 Usuario interactuando:', !isAtEnd, 'Rango:', newRange);
       }
     });
 
@@ -177,10 +182,7 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
           from: chartData[startIndex].time as Time,
           to: chartData[chartData.length - 1].time as Time
         });
-        // this.chart.timeScale().scrollToRealTime(); // seguir el final
       }
-
-      console.log('✅ setData() - Actualizadas', candles.length, 'velas');
     } catch (error) {
       console.error('❌ Error en setData:', error);
     }
@@ -195,12 +197,6 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
         low: lastCandle.low,
         close: lastCandle.close
       });
-
-      // if (!this.isUserInteracting) {
-      //   this.chart.timeScale().scrollToRealTime();
-      // }
-
-      console.log('⚡ update() - Vela actualizada:', lastCandle.close, 'Usuario interactuando:', this.isUserInteracting);
     } catch (error) {
       console.error('❌ Error en update:', error);
     }
@@ -247,4 +243,13 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
       this.chart.remove();
     }
   }
+
+  public startAnalysis(/* market: TypeMarket */): void {
+    this.tradingLogic.startAnalysis(/* market */);
+  }
+
+  public stopAnalysis(): void {
+    this.tradingLogic.stopAnalysis();
+  }
+
 }

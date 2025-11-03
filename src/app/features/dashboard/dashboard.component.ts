@@ -15,7 +15,7 @@ import { ChartsComponent } from "../../shared/components/charts/charts/charts.co
   standalone: true,
   imports: [
     CommonModule,
-    ControlPanelComponent,
+    // ControlPanelComponent,
     // TradingChartComponent, // TODO: Ver que hacer, eliminar
     // AiResponsePanelComponent, // TODO: Ver que hacer, componente list ai response panel
     PaperTradingDashboardComponent,
@@ -33,6 +33,7 @@ export class DashboardComponent implements OnInit {
   // singal
   public readonly candles = computed(() => this.storeServiceMarket.candles());
   public readonly marketInfo = computed(() => this.storeServiceMarket.MarkInfo());
+  public readonly currentPrice = computed(() => this.storeServiceMarket.currentPrice());
   // reciboDelHijo($event: string) {
   //   console.log('Mensaje recibido del hijo:', $event);
   // }
@@ -48,10 +49,10 @@ export class DashboardComponent implements OnInit {
     // this.aiResponse = this.tradingLogic.aiResponse;
     this.isRunning = this.tradingLogic.isRunning;
     // ✅ EFECTO para debuggear en Dashboard
-    effect(() => {
-      const currentCandles = this.candles();
-      console.log('📊 Dashboard - Velas en computed:', currentCandles?.length || 0, 'velas');
-    });
+    // effect(() => {
+    //   const currentCandles = this.candles();
+    //   console.log('📊 Dashboard - Velas en computed:', currentCandles?.length || 0, 'velas');
+    // });
   }
 
 
@@ -64,12 +65,12 @@ export class DashboardComponent implements OnInit {
 
   }
 
-  public startAnalysis(/* market: TypeMarket */): void {
-    // console.log('configuracion: ', this.storeServiceMarket.getDataMarket())
-    this.tradingLogic.startAnalysis(/* market */);
-  }
+  // public startAnalysis(/* market: TypeMarket */): void {
+  //   // console.log('configuracion: ', this.storeServiceMarket.getDataMarket())
+  //   this.tradingLogic.startAnalysis(/* market */);
+  // }
 
-  public stopAnalysis(): void {
-    this.tradingLogic.stopAnalysis();
-  }
+  // public stopAnalysis(): void {
+  //   this.tradingLogic.stopAnalysis();
+  // }
 }

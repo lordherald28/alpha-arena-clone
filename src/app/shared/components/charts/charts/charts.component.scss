@@ -17,7 +17,8 @@
 
 .chart-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 1rem;
     align-items: center;
     padding: 12px 16px;
     background: #151528;
@@ -32,6 +33,7 @@
 }
 
 .follow-btn {
+    margin-left: auto;
     background: #26a69a;
     color: white;
     border: none;

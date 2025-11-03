@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Component, OnInit, Signal, signal, output, inject } from '@angular/core';
+import { Component, OnInit, Signal, signal, output, inject, input, computed, effect, afterNextRender } from '@angular/core';
 import { TypeMarket } from '../../../core/models';
 import { PaperTradingService } from '../../../core/services/paper/paper-trading.service';
 import { CoinexService } from '../../../core/services/coinex/coinex.service';
@@ -17,27 +17,57 @@ type TimeFrame = { label: string, value: string };
 })
 export class PanelMarketSymbolComponent implements OnInit {
 
+
+
   cryptoPairs = signal<string[]>(['']);
   timeframes = signal<TimeFrame[]>([{ label: '', value: '' }]);
   candleLimits = signal<number[]>([]);
+
+  // input
+  isSelectDisabled = input<boolean>(true);
 
   // output emitir eventos
   pairChange = output<string>();
   timeframeChange = output<string>();
   limitChange = output<number>();
 
-  private configDataMarket!: TypeMarket;
+  private configDataMarket = computed(() => this.storeAppService.getDataMarket());
 
   // ✅  Inicializar FormControls
-  pairControl = new FormControl('');
-  timeframeControl = new FormControl('');
-  limitControl = new FormControl(0);
+  pairControl = new FormControl({ value: '', disabled: this.isSelectDisabled() });
+  timeframeControl = new FormControl({ value: '', disabled: this.isSelectDisabled() });
+  limitControl = new FormControl({ value: 0, disabled: this.isSelectDisabled() });
 
   constructor(
     private readonly storeAppService: StoreAppService
 
   ) {
-    this.configDataMarket = this.storeAppService.getDataMarket();
+    this.setupInputReactivity();
+  }
+
+  private setupInputReactivity(): void {
+    // ✅ EFECTO para isSelectDisabled
+    effect(() => {
+      const isDisabled = this.isSelectDisabled();
+      console.log('🔄 isSelectDisabled cambió:', isDisabled);
+
+      this.updateSelectState(isDisabled);
+    });
+
+  }
+
+  private updateSelectState(isDisabled: boolean): void {
+    if (isDisabled) {
+      this.pairControl.disable();
+      this.timeframeControl.disable();
+      this.limitControl.disable();
+      console.log('🔒 Select deshabilitado');
+    } else {
+      this.pairControl.enable();
+      this.timeframeControl.enable();
+      this.limitControl.enable();
+      console.log('🔓 Select habilitado');
+    }
   }
 
   ngOnInit() {
@@ -60,9 +90,10 @@ export class PanelMarketSymbolComponent implements OnInit {
 
     this.candleLimits.set([50, 100, 200, 500, 1000]);
     // set information to form controls
-    this.pairControl.setValue(this.configDataMarket.market, { onlySelf: true });
-    this.timeframeControl.setValue(this.configDataMarket.interval, { onlySelf: true });
-    this.limitControl.setValue(this.configDataMarket.limit, { onlySelf: true });
+    this.pairControl.setValue(this.configDataMarket().market, { onlySelf: true });
+    this.timeframeControl.setValue(this.configDataMarket().interval, { onlySelf: true });
+    this.limitControl.setValue(this.configDataMarket().limit, { onlySelf: true });
+
   }
 
   oncAcceptConfMarket(): void {

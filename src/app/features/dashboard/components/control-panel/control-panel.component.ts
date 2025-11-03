@@ -1,4 +1,4 @@
-import { Component, output, input, signal } from '@angular/core';
+import { Component, output, input, signal, effect, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PanelMarketSymbolComponent } from "../../../../shared/components/panel-market-symbol/panel-market-symbol.component";
 import { TypeMarket } from '../../../../core/models';
@@ -13,7 +13,14 @@ import { TypeMarket } from '../../../../core/models';
 })
 export class ControlPanelComponent {
 
+  constructor() {
+    afterNextRender(() => {
+      console.log('isRunngin: ', this.isRunning())
+      // effect(() => {
+      // })
+    })
 
+  }
   private market = signal<TypeMarket>({
     market: '',
     interval: '',
@@ -34,7 +41,6 @@ export class ControlPanelComponent {
   }
 
   onTimeframeChange($event: any) {
-    console.log('evento: ', $event);
     this.market.update(m => {
       return { ...m, interval: $event }
     });

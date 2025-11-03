@@ -1,7 +1,11 @@
 <div class="chart-wrapper">
+  <div class="control-section">
+    <app-control-panel (start)="startAnalysis()" (stop)="stopAnalysis()" [isRunning]="isLoadAnalysis()"></app-control-panel>
+  </div>
   <div class="chart-header">
-    <span>Simbolo: {{symbol()?.market}}</span>
-    <h3>Gráfico de Trading - {{ symbol()?.market || 'LINKUSDT' }}</h3>
+    <strong>Simbolo: {{symbol()?.market}}</strong>
+    <!-- <strong>Gráfico de Trading - {{ symbol()?.market || 'LINKUSDT' }}</strong> -->
+    <span>Precio actual: $ {{ currentPrice() || 0 }} USDT</span>
     <button class="follow-btn" (click)="resetZoomAndFollow()">
       {{ isUserInteracting ? '🔒 Seguir Precio' : '🔓 Siguiendo' }}
     </button>

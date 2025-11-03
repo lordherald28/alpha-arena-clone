@@ -1,65 +1,63 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { Market, TypeMarket } from '../../models';
-import { environment } from '../../../environments/environment';
-
-// —— Mensajes WS
-export interface CoinexStateMsg {
-    method: 'state.update';
-    data: { market: string; state_list: Array<Market /* { market: string; last: string; mark_price: string; high: string; low: string; } */> };
-    id: number | null;
-}
-export interface CoinexDealsMsg {
-    method: 'deals.update';
-    data: { market: string; deal_list: Array<{ deal_id: number; created_at: number; side: 'buy' | 'sell'; price: string; amount: string; }> };
-    id: number | null;
-}
+import { Injectable } from "@angular/core";
+import { environment } from "../../../environments/environment";
+import { BehaviorSubject } from "rxjs";
+import { CoinexDealsMsg, CoinexStateMsg, TypeMarket } from "../../models";
 
 @Injectable({ providedIn: 'root' })
 export class WSocketCoinEx {
-    private marketState$ = new BehaviorSubject<CoinexStateMsg | null>(null); // opcional
-    private deals$ = new BehaviorSubject<CoinexDealsMsg | null>(null);       // para velas
-
-    private wsocket!: WebSocket;
-    private url = environment.coinex.wsUrl || 'wss://socket.coinex.com/v2/futures';
+    private ws?: WebSocket;
+    private url = environment.coinex.wsUrl;
     private lastId = 0;
+    private currentMarket = '';
+    private session = 0;
 
-    connect(tm: TypeMarket): void {
-        this.wsocket = new WebSocket(this.url);
+    private marketState$ = new BehaviorSubject<CoinexStateMsg | null>(null);
+    private deals$ = new BehaviorSubject<CoinexDealsMsg | null>(null);
 
-        this.wsocket.onopen = () => {
-            const subState = { method: 'state.subscribe', params: { market_list: [tm.market] }, id: ++this.lastId };
-            const subDeals = { method: 'deals.subscribe', params: { market_list: [tm.market] }, id: ++this.lastId };
-            this.wsocket.send(JSON.stringify(subState)); // solo precio 24h si lo necesitas
-            this.wsocket.send(JSON.stringify(subDeals)); // trades en vivo
+    async connect(tm: TypeMarket): Promise<void> {
+        this.currentMarket = tm.market;
+        const session = ++this.session;           // marca de sesión
+        this.marketState$.next(null);             // evita replay del símbolo anterior
+        this.deals$.next(null);
+
+        this.ws = new WebSocket(this.url);
+
+        this.ws.onopen = () => {
+            this.ws!.send(JSON.stringify({ method: 'state.subscribe', params: { market_list: [tm.market] }, id: ++this.lastId }));
+            this.ws!.send(JSON.stringify({ method: 'deals.subscribe', params: { market_list: [tm.market] }, id: ++this.lastId }));
         };
 
-        this.wsocket.onmessage = async (event: MessageEvent) => {
-            if (!(event.data instanceof Blob)) return;
+        this.ws.onmessage = async (ev) => {
+            if (!(ev.data instanceof Blob)) return;
+            const text = await new Response(ev.data.stream().pipeThrough(new DecompressionStream('gzip'))).text();
+            const msg = JSON.parse(text);
+            // descarta mensajes de sesiones viejas o de otro market
+            if (this.session !== session) return;
+
+            if (msg.method === 'state.update') this.marketState$.next(msg as CoinexStateMsg);
+            if (msg.method === 'deals.update' && msg.data?.market === this.currentMarket) this.deals$.next(msg as CoinexDealsMsg);
+        };
+    }
+
+    disconnect(): Promise<void> {
+        return new Promise(resolve => {
+            const ws = this.ws;
+            if (!ws) { this.marketState$.next(null); this.deals$.next(null); return resolve(); }
+
             try {
-                const ds = new DecompressionStream('gzip');
-                const text = await new Response(event.data.stream().pipeThrough(ds)).text();
-                const msg = JSON.parse(text);
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ method: 'state.unsubscribe', params: { market_list: [this.currentMarket] }, id: ++this.lastId }));
+                    ws.send(JSON.stringify({ method: 'deals.unsubscribe', params: { market_list: [this.currentMarket] }, id: ++this.lastId }));
+                }
+            } catch { }
 
-                if (msg?.method === 'state.update') this.marketState$.next(msg as CoinexStateMsg);
-                if (msg?.method === 'deals.update') this.deals$.next(msg as CoinexDealsMsg);
-            } catch (e) {
-                console.error('WS parse error', e);
-            }
-        };
-
-        this.wsocket.onclose = e => console.log('WS cerrado', e.code, e.wasClean);
+            ws.onmessage = ws.onopen = ws.onerror = null;
+            ws.onclose = () => { this.marketState$.next(null); this.deals$.next(null); resolve(); };
+            ws.close();                                // espera el cierre (handshake) :contentReference[oaicite:1]{index=1}
+            this.ws = undefined;
+        });
     }
 
-    disconnect(tm: TypeMarket): void {
-        if (!this.wsocket) return;
-        const u1 = { method: 'state.unsubscribe', params: { market_list: [tm.market] }, id: ++this.lastId };
-        const u2 = { method: 'deals.unsubscribe', params: { market_list: [tm.market] }, id: ++this.lastId };
-        this.wsocket.send(JSON.stringify(u1));
-        this.wsocket.send(JSON.stringify(u2));
-        this.wsocket.close();
-    }
-
-    getMarketState$(): Observable<CoinexStateMsg | null> { return this.marketState$.asObservable(); }
-    getDeals$(): Observable<CoinexDealsMsg | null> { return this.deals$.asObservable(); }
+    getMarketState$() { return this.marketState$.asObservable(); }
+    getDeals$() { return this.deals$.asObservable(); }
 }
