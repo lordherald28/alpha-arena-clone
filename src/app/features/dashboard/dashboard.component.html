@@ -15,9 +15,10 @@
 
   <div class="main-content">
     <section class="chart-section">
-      <!-- <app-trading-chart [candles]="candles()"></app-trading-chart> -->
+      <app-charts [candles]="candles()" [symbol]="marketInfo()!"></app-charts>
+      <!-- <app-trading-chart ></app-trading-chart> -->
       <!-- <app-orden-list ></app-orden-list> -->
-      <app-test></app-test>
+      <!-- <app-test></app-test> -->
     </section>
 
     <aside class="side-panels">

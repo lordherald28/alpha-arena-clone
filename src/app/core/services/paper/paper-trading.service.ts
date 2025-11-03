@@ -47,6 +47,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     };
     this.setupAutoOrderMonitoring();
     this.updateBalanceUser();
+    this.stateAutoTrading();
   }
 
   ngOnDestroy(): void {
@@ -55,38 +56,10 @@ export class PaperTradingService implements ITradingService, OnDestroy {
 
   // --- Lógica de Monitoreo y Actualización en Tiempo Real ---
 
-  private updateBalanceUser(): void {
+  stateAutoTrading(): void {
     effect(() => {
-      const openOrders = this.openOrders();
-      const currentPrice = this.currentPriceMarketSymbol();
-
-      if (openOrders.length > 0 && currentPrice) {
-        const totalPNL = openOrders.reduce((sum, order) => {
-          const pnl = (order.side === DESITION.BUY)
-            ? (currentPrice - order.price) * order.amount
-            : (order.price - currentPrice) * order.amount;
-          return sum + pnl;
-        }, 0);
-        this.balanceService.updateRealTimePnL(totalPNL);
-      }
-    }, { allowSignalWrites: true });
-  }
-
-  private setupAutoOrderMonitoring(): void {
-    effect(() => {
-      const currentPrice = this.currentPriceMarketSymbol();
-      const openOrders = this.openOrders();
-
-      if (currentPrice > 0 && openOrders.length > 0) {
-        const ordersToClose = openOrders.filter(order =>
-          (order.side === DESITION.BUY && (currentPrice >= order.tp! || currentPrice <= order.sl!)) ||
-          (order.side === DESITION.SELL && (currentPrice <= order.tp! || currentPrice >= order.sl!))
-        );
-        if (ordersToClose.length > 0) {
-          this.closeOrders(ordersToClose);
-        }
-      }
-    }, { allowSignalWrites: true });
+      console.log(`🤖 Trading automático: ${this.autoTradingEnabled() ? 'ACTIVADO' : 'DESACTIVADO'}`);
+    })
   }
 
   // --- Métodos Públicos de la API del Director ---
@@ -130,7 +103,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   /**
    * @description Recibe la decisión de la IA y la procesa para ejecutar una orden si corresponde.
    */
-  processAIDecision(aiResponse:AiResponse, currentPrice: number, atr?: number): void {
+  processAIDecision(aiResponse: AiResponse, currentPrice: number, atr?: number): void {
     console.log(`🤖 Procesando decisión de IA:`, { decision: aiResponse.decision, confidence: aiResponse.confidence });
 
     this.lastAIDecision.set({ decision: aiResponse.decision, confidence: aiResponse.confidence });
@@ -146,7 +119,57 @@ export class PaperTradingService implements ITradingService, OnDestroy {
       console.log('❌ Trading automático DESHABILITADO - no se ejecuta orden');
     }
   }
+  // --- Métodos de Control y Estado ---
 
+  setAutoTrading(enabled: boolean): void {
+    this.autoTradingEnabled.set(enabled);
+  }
+
+  getAutoTradingStatus(): boolean {
+    return this.autoTradingEnabled();
+  }
+
+  // --- Métodos de Consulta (Getters) ---
+
+  getOpenOrders(market: string): Observable<any[]> {
+    const orders = this.openOrders().filter(order => order.market === market);
+    return of(orders.map(order => ({
+      order_id: order.id,
+      market: order.market,
+      side: order.side,
+      type: order.type,
+      amount: order.amount.toString(),
+      price: order.price.toString(),
+      status: order.status
+    })));
+  }
+
+  getOpenOrdersNumber(market: string): number {
+    return this.openOrders().filter(order => order.market === market).length;
+  }
+
+  getPaperOrders(): { open: TradingOrder[], closed: TradingOrder[] } {
+    return {
+      open: this.openOrders(),
+      closed: this.closedOrders()
+    };
+  }
+
+  // --- Implementación de la interfaz ITradingService ---
+  // Estos métodos se mantienen para cumplir con el contrato, pero la lógica principal
+  // se maneja con los métodos más específicos de arriba.
+
+  getCandles(): Observable<Candlestick[]> {
+    return this.serviceCoinex.getCandles(this.marketData());
+  }
+
+  getAccountBalance(): Observable<any[]> {
+    const balance = this.balance();
+    return of([
+      { currency: 'USDT', available: balance.USDT.toFixed(8), totalUSDT: balance.totalUSDT.toFixed(8), frozen: '0' },
+      { currency: 'BTC', available: balance.BTC.toFixed(8), frozen: '0' }
+    ]);
+  }
   // --- Métodos Privados de Ejecución (Orquestación) ---
 
   private executeOrder(order: TradingOrder): void {
@@ -196,56 +219,38 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     }
   }
 
-  // --- Métodos de Control y Estado ---
+  private updateBalanceUser(): void {
+    effect(() => {
+      const openOrders = this.openOrders();
+      const currentPrice = this.currentPriceMarketSymbol();
 
-  setAutoTrading(enabled: boolean): void {
-    this.autoTradingEnabled.set(enabled);
-    console.log(`🤖 Trading automático: ${enabled ? 'ACTIVADO' : 'DESACTIVADO'}`);
+      if (openOrders.length > 0 && currentPrice) {
+        const totalPNL = openOrders.reduce((sum, order) => {
+          const pnl = (order.side === DESITION.BUY)
+            ? (currentPrice - order.price) * order.amount
+            : (order.price - currentPrice) * order.amount;
+          return sum + pnl;
+        }, 0);
+        this.balanceService.updateRealTimePnL(totalPNL);
+      }
+    }, { allowSignalWrites: true });
   }
 
-  getAutoTradingStatus(): boolean {
-    return this.autoTradingEnabled();
+  private setupAutoOrderMonitoring(): void {
+    effect(() => {
+      const currentPrice = this.currentPriceMarketSymbol();
+      const openOrders = this.openOrders();
+
+      if (currentPrice > 0 && openOrders.length > 0) {
+        const ordersToClose = openOrders.filter(order =>
+          (order.side === DESITION.BUY && (currentPrice >= order.tp! || currentPrice <= order.sl!)) ||
+          (order.side === DESITION.SELL && (currentPrice <= order.tp! || currentPrice >= order.sl!))
+        );
+        if (ordersToClose.length > 0) {
+          this.closeOrders(ordersToClose);
+        }
+      }
+    }, { allowSignalWrites: true });
   }
-
-  // --- Métodos de Consulta (Getters) ---
-
-  getOpenOrders(market: string): Observable<any[]> {
-    const orders = this.openOrders().filter(order => order.market === market);
-    return of(orders.map(order => ({
-      order_id: order.id,
-      market: order.market,
-      side: order.side,
-      type: order.type,
-      amount: order.amount.toString(),
-      price: order.price.toString(),
-      status: order.status
-    })));
-  }
-
-  getOpenOrdersNumber(market: string): number {
-    return this.openOrders().filter(order => order.market === market).length;
-  }
-
-  getPaperOrders(): { open: TradingOrder[], closed: TradingOrder[] } {
-    return {
-      open: this.openOrders(),
-      closed: this.closedOrders()
-    };
-  }
-
-  // --- Implementación de la interfaz ITradingService ---
-  // Estos métodos se mantienen para cumplir con el contrato, pero la lógica principal
-  // se maneja con los métodos más específicos de arriba.
-
-  getCandles(): Observable<Candlestick[]> {
-    return this.serviceCoinex.getCandles(this.marketData());
-  }
-
-  getAccountBalance(): Observable<any[]> {
-    const balance = this.balance();
-    return of([
-      { currency: 'USDT', available: balance.USDT.toFixed(8), totalUSDT: balance.totalUSDT.toFixed(8), frozen: '0' },
-      { currency: 'BTC', available: balance.BTC.toFixed(8), frozen: '0' }
-    ]);
-  }
+  
 }

@@ -77,6 +77,42 @@ export class StoreAppService {
     this.marketDataConfig.set(marketData);
   }
 
+  // ✅ NUEVO: Método para actualizar vela en tiempo real
+  updateRealtimeCandle(newCandle: Candlestick): void {
+    const currentCandles = this.candles();
+
+    if (currentCandles.length === 0) {
+      this.candles.set([newCandle]);
+      return;
+    }
+
+    const lastCandle = currentCandles[currentCandles.length - 1];
+    const isSameTimePeriod = this.isSameCandlePeriod(lastCandle, newCandle);
+
+    if (isSameTimePeriod) {
+      // ✅ ACTUALIZAR última vela existente
+      const updatedCandles = [...currentCandles];
+      updatedCandles[updatedCandles.length - 1] = {
+        ...lastCandle,
+        high: Math.max(lastCandle.high, newCandle.high),
+        low: Math.min(lastCandle.low, newCandle.low),
+        close: newCandle.close
+      };
+      this.candles.set(updatedCandles);
+    } else {
+      // ✅ AGREGAR nueva vela
+      this.candles.set([...currentCandles, newCandle]);
+    }
+  }
+
+  // ✅ NUEVO: Determinar si es el mismo período de vela
+  private isSameCandlePeriod(candle1: Candlestick, candle2: Candlestick): boolean {
+    // Asumiendo velas de 5 minutos - ajusta según tu timeframe
+    const time1 = Math.floor(candle1.timestamp / (5 * 60 * 1000));
+    const time2 = Math.floor(candle2.timestamp / (5 * 60 * 1000));
+    return time1 === time2;
+  }
+
   private loadDataMarket(): void {
     if (localStorage.getItem(KEY_MARKET_CONFIG_DATA)) {
       const config_market = localStorage.getItem(KEY_MARKET_CONFIG_DATA)

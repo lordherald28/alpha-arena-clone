@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradingLogicService } from '../../core/services/trading-logic.service';
 import { ControlPanelComponent } from './components/control-panel/control-panel.component';
@@ -8,6 +8,7 @@ import { PaperTradingDashboardComponent } from './components/paper-trading-dashb
 import { StoreAppService } from '../../core/store/store-app.service';
 import { PaperTradingService } from '../../core/services/paper/paper-trading.service';
 import { TestComponent } from "../../shared/components/test/test.component";
+import { ChartsComponent } from "../../shared/components/charts/charts/charts.component";
 
 @Component({
   selector: 'app-dashboard',
@@ -15,23 +16,30 @@ import { TestComponent } from "../../shared/components/test/test.component";
   imports: [
     CommonModule,
     ControlPanelComponent,
-    TradingChartComponent,
-    AiResponsePanelComponent,
+    // TradingChartComponent, // TODO: Ver que hacer, eliminar
+    // AiResponsePanelComponent, // TODO: Ver que hacer, componente list ai response panel
     PaperTradingDashboardComponent,
-    TestComponent
+    TestComponent,
+    ChartsComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit {
-  reciboDelHijo($event: string) {
-    console.log('Mensaje recibido del hijo:', $event);
-  }
+
+  // inject
+  private readonly storeServiceMarket = inject(StoreAppService);
+
+  // singal
+  public readonly candles = computed(() => this.storeServiceMarket.candles());
+  public readonly marketInfo = computed(() => this.storeServiceMarket.MarkInfo());
+  // reciboDelHijo($event: string) {
+  //   console.log('Mensaje recibido del hijo:', $event);
+  // }
   // public candles;
   // public aiResponse;
   public isRunning;
   // public lastUpdate;
-  private readonly storeServiceMarket = inject(StoreAppService);
 
   // public readonly currentPriceSymbol = inject(PaperTradingService).currentPriceMarketSymbol();
 
@@ -39,11 +47,15 @@ export class DashboardComponent implements OnInit {
     // this.candles = this.tradingLogic.candles;
     // this.aiResponse = this.tradingLogic.aiResponse;
     this.isRunning = this.tradingLogic.isRunning;
-    // this.lastUpdate = this.tradingLogic.lastUpdate;
+    // ✅ EFECTO para debuggear en Dashboard
+    effect(() => {
+      const currentCandles = this.candles();
+      console.log('📊 Dashboard - Velas en computed:', currentCandles?.length || 0, 'velas');
+    });
   }
 
 
-  eventoHijo = output<number>();
+  // eventoHijo = output<number>();
 
   ngOnInit(): void {
 

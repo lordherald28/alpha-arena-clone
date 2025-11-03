@@ -1,9 +1,10 @@
-import { Component, input, effect, AfterViewInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component,  effect, AfterViewInit, OnDestroy, ViewChild, ElementRef, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Candlestick } from '../../../../core/models';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries, LineData, LineSeries } from 'lightweight-charts';
 
 import { EMA } from 'technicalindicators';
+import { StoreAppService } from '../../../../core/store/store-app.service';
 
 @Component({
   selector: 'app-trading-chart',
@@ -13,14 +14,19 @@ import { EMA } from 'technicalindicators';
   styleUrls: ['./trading-chart.component.scss']
 })
 export class TradingChartComponent implements AfterViewInit, OnDestroy {
+
+  // Inject
+  private readonly storeApp = inject(StoreAppService);
+
   @ViewChild('chartContainer') chartContainer!: ElementRef;
-  public candles = input<Candlestick[]>([]);
+  public candles = computed(() => this.storeApp.candles());
 
   private chart: IChartApi | any;
   private candlestickSeries: ISeriesApi<'Candlestick'> | undefined;
   private ema660Series: ISeriesApi<'Line'> | undefined;
 
   constructor() {
+    console.log('🕯️ recibidas del stopreApp: ', this.candles());
     effect(() => {
       const candleData = this.candles();
       if (candleData && candleData.length > 0 && this.candlestickSeries) {
