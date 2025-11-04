@@ -1,12 +1,26 @@
 <div class="panel">
-  <h3>Órdenes Abiertas / Historial</h3>
-  <div class="order-list">
-    <div *ngFor="let order of mockOrders" class="order-item" [class.buy]="order.side === 'buy'"
-      [class.sell]="order.side === 'sell'">
-      <span class="side">{{ order.side.toUpperCase() }}</span>
-      <span class="amount">{{ order.amount }}</span>
-      <span class="price">{{ order.price | currency:'USD' }}</span>
-      <span class="status">{{ order.status }}</span>
+  <h3>Operar</h3>
+  <form [formGroup]="formOrder">
+    <div class="btn-gpo">
+      <button class="btn" (click)="openOrderBuyOrSell(orderSide.BUY)" [disabled]="!this.formOrder.valid">⬆️ Comprar</button>
+      <input id="amount" class="form-input input-amount" placeholder="Canitdad..." formControlName="amount" type="number" />
+      <button class="btn btn-sell" (click)="openOrderBuyOrSell(orderSide.SELL)" [disabled]="!this.formOrder.valid">⬇️ Vender</button>
+      <button (click)="toggleAutoTrading()" class="btn btn-desactivar">
+        @if (flagsAutoTrading()) {
+        Deshabilitar Auto-Trading
+        } @else {
+        Habilitar Auto-Trading
+        }
+      </button>
+
+      <button (click)="toggleActivarIA()" class="btn btn-desactivar">
+        @if (flagsActivarIA()) {
+        Deshabilitar IA 🤖
+        } @else {
+        Habilitar IA 🤖
+        }
+      </button>
     </div>
-  </div>
+  </form>
+
 </div>

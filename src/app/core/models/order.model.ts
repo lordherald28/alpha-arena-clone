@@ -4,8 +4,8 @@ export enum OrderType {
 }
 
 export enum OrderSide {
-    BUY = 'buy',
-    SELL = 'sell'
+    BUY = 'BUY',
+    SELL = 'SELL'
 }
 
 export interface TypeMarket {
@@ -23,12 +23,8 @@ export interface Balance {
     totalUSDT: number;
 }
 
-export interface TradingOrder {
+export interface TradingOrder extends TradingOrderExtended {
     id: string;
-    market: string;
-    side: 'BUY' | 'SELL' | 'HOLD';
-    type: 'market' | 'limit';
-    amount: number;
     price: number; // Precio de ejecución
     timestamp: number;
     status: StatusOrderType;
@@ -37,8 +33,15 @@ export interface TradingOrder {
     closePrice?: number;
     pnl?: number;  // Profit/Loss
     closeReason?: 'tp' | 'sl' | 'manual';
+
 }
 
+export interface TradingOrderExtended {
+    market: string;
+    side: 'BUY' | 'SELL' | 'HOLD';
+    type: 'market' | 'limit';
+    amount: number;
+}
 export interface PaperTradingConfig {
     initialBalance: number;
     fee: number; // Comisión (ej: 0.001 para 0.1%)

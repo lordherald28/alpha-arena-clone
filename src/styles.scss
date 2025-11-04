@@ -1,1 +1,59 @@
 /* You can add global styles to this file, and also import other style files */
+/* --- Define tu "tema" en un lugar (ej: en tu :root o en el CSS de tu componente) --- */
+:root {
+    --input-bg-color: #ffffff;
+    --input-text-color: #333333;
+    --input-border-color: #e0e0e0;
+    --input-border-focus-color: #007bff;
+    /* Un azul vibrante o el color de tu marca */
+    --input-placeholder-color: #999999;
+    --input-shadow-focus: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* --- La clase base para tus inputs estándar --- */
+input {
+    /* 1. Layout y Tamaño */
+    width: 100%;
+    /* O el tamaño que necesites, e.g., 300px */
+    padding: 12px 16px;
+    /* Espacio interno para que el texto no esté pegado */
+    font-size: 16px;
+    /* Tamaño de fuente legible */
+    line-height: 1.5;
+    font-family: inherit;
+    /* Hereda la fuente del body para consistencia */
+
+    /* 2. Apariencia */
+    background-color: var(--input-bg-color);
+    color: var(--input-text-color);
+    border: 1px solid var(--input-border-color);
+    border-radius: 8px;
+    /* Bordes redondeados modernos */
+    outline: none;
+    /* Quita el outline por defecto del navegador */
+
+    /* 3. Transiciones suaves */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+/* --- Estados del Input --- */
+
+/* Estado :hover (cuando el mouse pasa por encima) */
+input:hover {
+    border-color: #c0c0c0;
+    /* Un gris un poco más oscuro */
+}
+
+/* Estado :focus (cuando el usuario hace clic en el input) */
+input:focus {
+    border-color: var(--input-border-focus-color);
+    box-shadow: var(--input-shadow-focus);
+    /* El resplandor característico */
+}
+
+/* Estilo para el placeholder */
+input::placeholder {
+    color: var(--input-placeholder-color);
+    font-style: italic;
+    /* Opcional: para diferenciarlo más */
+}

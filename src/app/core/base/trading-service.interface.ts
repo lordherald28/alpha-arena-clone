@@ -12,7 +12,7 @@ export interface ITradingService {
 
     // Para información de la cuenta y trading (requieren autenticación)
     // getAccountBalance(): Observable<Balance[]>;
-    placeMarketOrder(params: { market: string; side: string; amount: string; }): Observable<any>;
+    placeMarketOrder(params: { market: string; side: string; amount: number; }): TradingOrder;
     getOpenOrders(market: string): Observable<TradingOrder[]>;
     // ... otros métodos comunes que necesites
 }

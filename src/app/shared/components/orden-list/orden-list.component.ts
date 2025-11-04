@@ -116,8 +116,40 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     return pnl > 0 ? 'pnl-positive' : pnl < 0 ? 'pnl-negative' : 'pnl-zero';
   }
 
-  formatNumber(value: number, decimals: number): string {
-    return value.toFixed(decimals);
+  /**
+   * Formatea un número de forma segura, manejando strings, null y undefined.
+   * Incluye console.log para depurar valores problemáticos.
+   */
+  formatNumber(value: number | string | null | undefined, decimals: number = 2): string {
+    // --- PUNTO DE DEPURACIÓN 1: Ver el valor original que llega ---
+    console.log(`[formatNumber] Valor recibido: ${value}, Tipo: ${typeof value}`);
+
+    // 1. Si el valor es nulo o indefinido, devolvemos '0.00' y salimos.
+    if (value === null || value === undefined) {
+      console.warn(`[formatNumber] El valor es nulo o indefinido. Devolviendo '0.00'.`);
+      return '0.00';
+    }
+
+    // 2. Convertimos el valor a número. Si ya era un número, no pasa nada.
+    const numericValue = typeof value === 'string' ? parseFloat(value) : value;
+
+    // --- PUNTO DE DEPURACIÓN 2: Ver el valor después de la conversión ---
+    console.log(`[formatNumber] Valor después de la conversión: ${numericValue}, Tipo: ${typeof numericValue}`);
+
+    // 3. Si la conversión falló (ej: era un string como "hola"), devolvemos '0.00'.
+    if (isNaN(numericValue)) {
+      console.warn(`[formatNumber] El valor no es un número válido (NaN). Devolviendo '0.00'.`);
+      return '0.00';
+    }
+
+    // 4. Si todo fue bien, formateamos el número.
+    // ¡El número 0 SÍ funciona aquí! 0.toFixed(2) -> "0.00"
+    const formattedValue = numericValue.toFixed(decimals);
+
+    // --- PUNTO DE DEPURACIÓN 3: Ver el valor final formateado ---
+    console.log(`[formatNumber] Valor formateado con éxito: ${formattedValue}`);
+
+    return formattedValue;
   }
 
   formatTimestamp(timestamp: number): string {

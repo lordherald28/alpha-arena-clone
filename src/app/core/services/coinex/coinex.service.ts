@@ -32,8 +32,8 @@ export class CoinexService implements ITradingService {
     return of([]);
   }
 
-  placeMarketOrder(params: { market: string; side: string; amount: string; }): Observable<any> {
-    return of(null);
+  placeMarketOrder(params: { market: string; side: string; amount: number; }): TradingOrder {
+    return Object.assign({});
   }
 
   /**

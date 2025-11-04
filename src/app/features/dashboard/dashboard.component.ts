@@ -10,6 +10,7 @@ import { PaperTradingService } from '../../core/services/paper/paper-trading.ser
 import { TestComponent } from "../../shared/components/test/test.component";
 import { ChartsComponent } from "../../shared/components/charts/charts/charts.component";
 import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
+import { OrdersPanelComponent } from "./components/orders-panel/orders-panel.component";
 
 @Component({
   selector: 'app-dashboard',
@@ -23,7 +24,8 @@ import { OrdenListComponent } from "../../shared/components/orden-list/orden-lis
     // TestComponent,
     ChartsComponent,
     AiResponsePanelComponent,
-    OrdenListComponent
+    OrdenListComponent,
+    // OrdersPanelComponent
 ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

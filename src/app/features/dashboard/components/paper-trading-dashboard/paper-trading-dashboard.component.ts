@@ -7,12 +7,13 @@ import { PaperTradingService } from '../../../../core/services/paper/paper-tradi
 import { Balance } from '../../../../core/models';
 import { StoreAppService } from '../../../../core/store/store-app.service';
 import { BalanceService } from '../../../../core/services/helpers/trading/balance.service';
+import { OrdersPanelComponent } from "../orders-panel/orders-panel.component";
 
 
 @Component({
   selector: 'app-paper-trading-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, OrdersPanelComponent],
   templateUrl: './paper-trading-dashboard.component.html',
   styleUrl: './paper-trading-dashboard.component.scss'
 })

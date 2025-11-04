@@ -2,7 +2,7 @@
 
 import { computed, effect, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { TradingOrder, PaperTradingConfig, Candlestick, Balance, TypeMarket, statusOrder, AiResponse } from '../../models';
+import { TradingOrder, PaperTradingConfig, Candlestick, Balance, statusOrder, AiResponse } from '../../models';
 import { ITradingService } from '../../base/trading-service.interface';
 import { CoinexService } from '../coinex/coinex.service';
 import { environment } from '../../../environments/environment';
@@ -35,7 +35,8 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private readonly marketData = computed(() => this.storeAppService.marketDataConfig());
 
   // --- Estado de Control del Director ---
-  private autoTradingEnabled = signal<boolean>(false);
+  // private autoTradingEnabled = signal<boolean>(false); // TODO: Pasar esto al store app, para que este centralizado
+  private autoTradingEnabled = computed(() => this.storeAppService.autoTradingEnableStoreApp());
   private lastAIDecision = signal<{ decision: string, confidence: number } | null>(null);
   private config: PaperTradingConfig;
 
@@ -65,46 +66,63 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   // --- Métodos Públicos de la API del Director ---
 
   /**
-   * @description Coloca una orden de mercado simulada.
-   */
-  placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL'; amount: string; }): Observable<any> {
-    return new Observable(observer => {
-      try {
-        const currentPrice = this.currentPriceMarketSymbol();
-        const amount = parseFloat(params.amount);
-        const order: TradingOrder = {
-          id: `paper_${Date.now()}`,
-          market: this.marketData().market,
-          side: params.side,
-          type: 'market',
-          amount: amount,
-          price: currentPrice,
-          timestamp: Date.now(),
-          status: statusOrder.filled
-        };
+    * @description Coloca una orden manual de mercado simulada.
+    * @param params Parámetros de la orden.
+    * @returns {TradingOrder} La orden que fue ejecutada.
+    * @throws {Error} Si no hay margen suficiente.
+    */
+  placeMarketOrder(params: { market: string; side: 'BUY' | 'SELL' | 'HOLD'; amount: number; }): TradingOrder {
+    try {
+      const currentPrice = this.currentPriceMarketSymbol();
 
-        // El director delega el cálculo de TP/SL al estratega de riesgo.
-        const { tp, sl } = this.riskManagement.calculateTpSlByPercent(params.side, currentPrice, this.config.defaultRiskPercent);
-        order.tp = tp;
-        order.sl = sl;
+      const order: TradingOrder = {
+        id: `paper_${Date.now()}`,
+        market: params.market || this.marketData().market,
+        side: params.side,
+        type: 'market',
+        amount: params.amount,
+        price: currentPrice,
+        timestamp: Date.now(),
+        status: statusOrder.filled
+      };
 
-        console.log('🎯 ORDEN CREADA:', { ...order, method: 'Percent-based' });
-        this.executeOrder(order);
+      // Conmutador para saber que RR aplicar TODO: Deuda tecnica
+      // switch () {
+      //   case value:
 
-        observer.next({ code: 0, data: { order_id: order.id, status: 'filled', message: 'Orden de paper trading ejecutada' } });
-        observer.complete();
+      //     break;
 
-      } catch (error) {
-        observer.error({ code: -1, message: `Error en paper trading: ${error}` });
-      }
-    });
+      //   default:
+      //     break;
+      // }
+      // const { tp, sl } = this.riskManagement.calculateTpSlByPercent(params.side, currentPrice, this.config.defaultRiskPercent);
+      // order.tp = tp;
+      // order.sl = sl;
+      const { tp, sl } = this.riskManagement.calculateTpSlByFixedRisk(order.side, currentPrice);
+      order.tp = tp;
+      order.sl = sl;
+      console.log('🎯 ORDEN CREADA:', { ...order, method: 'Percent-based' });
+
+      // Esta llamada es síncrona y no devuelve nada (void).
+      // Si hay un error (ej. margen insuficiente), lanzará una excepción.
+      this.executeOrder(order);
+
+      // Si todo fue bien, devolvemos la orden creada.
+      return order;
+
+    } catch (error: any) {
+      // Propagamos el error para que el componente lo maneje.
+      // Es mejor manejar los errores en el componente (UI) que en el servicio (lógica).
+      throw new Error(`Error al colocar la orden: ${error.message}`);
+    }
   }
+
 
   /**
    * @description Recibe la decisión de la IA y la procesa para ejecutar una orden si corresponde.
    */
   processAIDecision(aiResponse: AiResponse, currentPrice: number, atr?: number): void {
-    
+
     console.log(`🤖 Procesando decisión de IA:`, { decision: aiResponse.decision, confidence: aiResponse.confidence });
 
     this.lastAIDecision.set({ decision: aiResponse.decision, confidence: aiResponse.confidence });
@@ -120,16 +138,6 @@ export class PaperTradingService implements ITradingService, OnDestroy {
       console.log('❌ Trading automático DESHABILITADO - no se ejecuta orden');
     }
   }
-  // --- Métodos de Control y Estado ---
-
-  setAutoTrading(enabled: boolean): void {
-    this.autoTradingEnabled.set(enabled);
-  }
-
-  getAutoTradingStatus(): boolean {
-    return this.autoTradingEnabled();
-  }
-
   // --- Métodos de Consulta (Getters) ---
 
   getOpenOrders(market: string): Observable<any[]> {
@@ -254,5 +262,5 @@ export class PaperTradingService implements ITradingService, OnDestroy {
       }
     }, { allowSignalWrites: true });
   }
-  
+
 }

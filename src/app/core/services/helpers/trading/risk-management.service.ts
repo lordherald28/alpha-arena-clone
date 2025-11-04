@@ -17,7 +17,41 @@ import { StoreAppService } from '../../../store/store-app.service';
  */
 @Injectable({ providedIn: 'root' })
 export class RiskManagementService {
+
+    // =================================================================
+    // 👇 NUEVA CONFIGURACIÓN PARA TU ESTRATEGIA DE RIESGO FIJO 👇
+    // =================================================================
+    /**
+     * Define el riesgo absoluto que quieres asumir por operación para una RR 1:1.
+     * Ajústalo según tu estrategia y el par que operes.
+     */
+    private readonly FIXED_RISK_AMOUNT = 0.01; // Ejemplo: Riesgo de $0.01
+    // =================================================================
+
     constructor() { }
+
+    /**
+     * @description Calcula TP y SL basándose en un riesgo fijo para una RR 1:1.
+     * Ideal para tener niveles de salida cercanos y visibles.
+     * @param side Lado de la operación ('BUY' o 'SELL').
+     * @param entryPrice Precio de entrada de la operación.
+     * @returns Un objeto con los precios de TP y SL.
+     */
+    public calculateTpSlByFixedRisk(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number): { tp: number; sl: number } {
+        const risk = this.FIXED_RISK_AMOUNT;
+
+        if (side === 'BUY') {
+            // Si compramos, el SL está por debajo y el TP por encima a la misma distancia.
+            const sl = entryPrice - risk;
+            const tp = entryPrice + risk;
+            return { tp, sl };
+        } else { // 'SELL'
+            // Si vendemos, el SL está por encima y el TP por debajo a la misma distancia.
+            const sl = entryPrice + risk;
+            const tp = entryPrice - risk;
+            return { tp, sl };
+        }
+    }
 
     /**
      * @description Calcula el tamaño de la posición basado en el balance disponible y un porcentaje de riesgo.
@@ -108,6 +142,31 @@ export class RiskManagementService {
         }
 
         // 4. Validar balance suficiente
+        if (availableBalance < 1) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @description Determina si una orden debe ser ejecutada basándose en múltiples criterios de riesgo.
+     * @param openOrdersCount El número actual de órdenes abiertas.
+     * @param availableBalance El balance disponible en la cuenta.
+     * @returns `true` si la orden debe ejecutarse, `false` en caso contrario.
+     */
+    public shouldExecuteOrderManual(
+        openOrdersCount: number,
+        availableBalance: number,
+        atr?: number,
+        currentPrice?: number
+    ): boolean {
+        // 1. Validar número máximo de órdenes abiertas
+        if (openOrdersCount >= MAX_ORDEN_OPEN) {
+            return false;
+        }
+
+        // 2. Validar balance suficiente
         if (availableBalance < 1) {
             return false;
         }

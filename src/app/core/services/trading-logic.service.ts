@@ -1,5 +1,5 @@
 // services/trading-logic.service.ts
-import { effect, inject, Inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { GlmAiGeneralService } from './ai-analysis/gml-ai-general.service';
 
@@ -25,6 +25,7 @@ export class TradingLogicService {
   public isRunning = signal<boolean>(false);
   public tradingStatus = signal({ active: false, lastOrder: null as string | null, totalTrades: 0 });
   private isFirtsCallToAI = signal<boolean>(false);
+  private readonly isActiveIA = computed(() => this.storeApp.desactivarIA());
 
   private hb?: any;
   private analysisInterval?: any;
@@ -40,13 +41,17 @@ export class TradingLogicService {
       const hasCandles = this.storeApp.candles().length > 0;
       const hasPrice = this.storeApp.currentPrice() > 0;
       const isFirstCall = this.isFirtsCallToAI();
+      const isActiveIA = this.isActiveIA();
 
       // ✅ ESPERAR PRECIO Y VELAS
-      if (hasCandles && hasPrice && isFirstCall) {
+      if (hasCandles && hasPrice && isFirstCall && isActiveIA) {
         this.runAnalysisCycle();
         this.isFirtsCallToAI.set(false);
       }
     }, { allowSignalWrites: true })
+    effect(() => {
+      console.log('Activada 🤖: ', this.isActiveIA());
+    })
   }
 
   // 1) Arranque inicial
@@ -64,8 +69,11 @@ export class TradingLogicService {
     void this.switchMarket(cfg);
 
     // Iniciar intervalo de análisis
-    this.startAnalysisInterval();
+    // En caso de no usar la IA, no es necesario el intervalo ni el correr ciclos de analisis
+    if (this.isActiveIA())
+      this.startAnalysisInterval();
   }
+
 
   // 2. CONFIGURAR INTERVALO
   private startAnalysisInterval(): void {
@@ -196,8 +204,8 @@ export class TradingLogicService {
 
   //   // this.paperTrading.resetPaperTrading();
   // }
-  enableAutoTrading(): void { this.paperTrading.setAutoTrading(true); }
-  disableAutoTrading(): void { this.paperTrading.setAutoTrading(false); }
+  // enableAutoTrading(): void { this.paperTrading.setAutoTrading(true); }
+  // disableAutoTrading(): void { this.paperTrading.setAutoTrading(false); }
 
   // Helper canldes RT
   private startBarHeartbeat(ivMs: number) {
@@ -237,7 +245,8 @@ export class TradingLogicService {
     // console.log('candels 2: ', candles);
 
     console.log(this.storeApp.currentPrice())
-    this.paperTrading.setAutoTrading(true);
+    // this.paperTrading.setAutoTrading(true); // TODO: Apartir de ahora es el Store el que administra el trade automatico (operaciones automaticas)
+    // this.storeApp.autoTradingEnableStoreApp.set(true);
     console.log('autoenebale')
     this.aiGlmSub =
       this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket)
