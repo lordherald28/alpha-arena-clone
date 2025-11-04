@@ -16,6 +16,7 @@ export class AiResponsePanelComponent {
 
   public aiResponse = input<AiResponse | null>(null);
 
+  date!: Date;
   public aiResponseHist = computed(() => this.storeApp.aiResponseHistory());
-  
+
 }

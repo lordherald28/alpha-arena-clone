@@ -2,7 +2,7 @@ import { Component, input, computed, inject, OnInit, OnDestroy, signal } from '@
 import { CommonModule } from '@angular/common';
 import { TradingOrder } from '../../../core/models';
 import { PaperTradingService } from '../../../core/services/paper/paper-trading.service';
-import { RealTimePriceService } from '../../../core/services/real-time-price.service';
+// import { RealTimePriceService } from '../../../core/services/real-time-price.service';
 import { DESITION } from '../../../core/utils/const.utils';
 import { StoreAppService } from '../../../core/store/store-app.service';
 
@@ -17,12 +17,12 @@ export class OrdenListComponent implements OnInit, OnDestroy {
   public entradaDesdePadre = input<string>('');
 
   // Services
-  private realTimePrice = inject(RealTimePriceService);
+  // private realTimePrice = inject(RealTimePriceService);
   private paperTrading = inject(PaperTradingService);
   private storeApp = inject(StoreAppService);
 
   // Señal del precio actual
-  public currentPrice = this.realTimePrice.currentPrice;
+  public currentPrice = computed(() => this.storeApp.currentPrice());
 
   // ✅ CORREGIDO: Señal computada que se actualiza automáticamente
   public ordenesConPNL = computed(() => {
@@ -53,13 +53,13 @@ export class OrdenListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Conectar al mercado deseado
     // const market = 'ETHUSDT'; // Ajusta según tu mercado??
-    this.realTimePrice.connect(this.market().market);
+    // this.realTimePrice.connect(this.market().market);
 
     console.log('📊 Inicializando componente de órdenes con precio real-time');
   }
 
   ngOnDestroy(): void {
-    this.realTimePrice.disconnect();
+    // this.realTimePrice.disconnect();
   }
 
   // En OrdenListComponent - Método corregido

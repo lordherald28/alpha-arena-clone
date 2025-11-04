@@ -28,6 +28,10 @@ export const environment = {
     glmAi: {
         apiKey: '7b9ad9add7af400e8f600a6e9c240934.S5BbL9Xq7S7vdMHN',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        localUrl:'http://localhost:11434'
+        localUrl:'http://localhost:11434',
+    },
+    deepseek:{
+        apiKey:'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',
+        url:'https://api.deepseek.com'
     }
 };

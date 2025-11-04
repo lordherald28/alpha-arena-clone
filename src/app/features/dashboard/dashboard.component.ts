@@ -9,6 +9,7 @@ import { StoreAppService } from '../../core/store/store-app.service';
 import { PaperTradingService } from '../../core/services/paper/paper-trading.service';
 import { TestComponent } from "../../shared/components/test/test.component";
 import { ChartsComponent } from "../../shared/components/charts/charts/charts.component";
+import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
 
 @Component({
   selector: 'app-dashboard',
@@ -21,7 +22,8 @@ import { ChartsComponent } from "../../shared/components/charts/charts/charts.co
     PaperTradingDashboardComponent,
     // TestComponent,
     ChartsComponent,
-    AiResponsePanelComponent
+    AiResponsePanelComponent,
+    OrdenListComponent
 ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

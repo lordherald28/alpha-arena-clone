@@ -1,0 +1,166 @@
+.panel {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.trade-card {
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: #2a2a2a;
+    transition: all 0.3s ease;
+}
+
+.trade-card:hover {
+    border-color: #555;
+}
+
+.trade-summary {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.trade-summary::-webkit-details-marker {
+    display: none;
+}
+
+.trade-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.decision-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.decision-badge.buy {
+    background: #00c851;
+    color: white;
+}
+
+.decision-badge.sell {
+    background: #ff4444;
+    color: white;
+}
+
+.decision-badge.hold {
+    background: #ffbb33;
+    color: black;
+}
+
+.confidence-badge {
+    background: #3498db;
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.timestamp {
+    margin-left: auto;
+    color: #888;
+    font-size: 0.8rem;
+}
+
+.strategy-info small {
+    color: #aaa;
+    font-style: italic;
+}
+
+.trade-details {
+    padding: 1rem;
+    border-top: 1px solid #333;
+    background: #252525;
+    border-radius: 0 0 8px 8px;
+}
+
+.reason-section {
+    margin-bottom: 1rem;
+}
+
+.reason-text {
+    margin: 0.5rem 0 0 0;
+    color: #ddd;
+    line-height: 1.4;
+}
+
+.json-section {
+    margin: 1rem 0;
+}
+
+.json-summary {
+    color: #3498db;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+}
+
+.json-code {
+    background: #1a1a1a;
+    padding: 1rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    margin: 0.5rem 0;
+    max-height: 300px;
+    overflow-y: auto;
+    color: #e1e1e1;
+}
+
+.risk-info {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333;
+}
+
+.risk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.risk-grid span {
+    background: #333;
+    padding: 0.4rem;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #888;
+}
+
+/* Animación suave para el acordeón */
+.trade-card[open] .trade-summary {
+    border-bottom: 1px solid #333;
+}
+
+.trade-details {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -41,7 +41,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
 
   constructor() {
     this.config = {
-      initialBalance: this.balanceService.getBalance().USDT,
+      initialBalance: this.balance().USDT || environment.paperTrading.initialBalance,
       fee: environment.paperTrading.fee,
       defaultRiskPercent: environment.paperTrading.defaultRisk
     };
@@ -104,6 +104,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
    * @description Recibe la decisión de la IA y la procesa para ejecutar una orden si corresponde.
    */
   processAIDecision(aiResponse: AiResponse, currentPrice: number, atr?: number): void {
+    
     console.log(`🤖 Procesando decisión de IA:`, { decision: aiResponse.decision, confidence: aiResponse.confidence });
 
     this.lastAIDecision.set({ decision: aiResponse.decision, confidence: aiResponse.confidence });
@@ -163,12 +164,13 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     return this.serviceCoinex.getCandles(this.marketData());
   }
 
-  getAccountBalance(): Observable<any[]> {
+  getAccountBalance(): Observable<Balance> {
     const balance = this.balance();
-    return of([
-      { currency: 'USDT', available: balance.USDT.toFixed(8), totalUSDT: balance.totalUSDT.toFixed(8), frozen: '0' },
-      { currency: 'BTC', available: balance.BTC.toFixed(8), frozen: '0' }
-    ]);
+    return of(balance);
+    // return of([
+    //   { currency: 'USDT', available: balance.USDT.toFixed(8), totalUSDT: balance.totalUSDT.toFixed(8), frozen: '0' },
+    //   { currency: 'BTC', available: balance.BTC.toFixed(8), frozen: '0' }
+    // ]);
   }
   // --- Métodos Privados de Ejecución (Orquestación) ---
 

@@ -1,5 +1,5 @@
 // services/trading-logic.service.ts
-import { computed, effect, inject, Inject, Injectable, signal } from '@angular/core';
+import { effect, inject, Inject, Injectable, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { GlmAiGeneralService } from './ai-analysis/gml-ai-general.service';
 
@@ -8,8 +8,8 @@ import { PaperTradingService } from './paper/paper-trading.service';
 import { StoreAppService } from '../store/store-app.service';
 import { WSocketCoinEx } from './coinex/ws-coinex.service';
 import { LIMI_OPEN_ORDERS } from '../utils/const.utils';
-import { Candlestick, TypeMarket } from '../models';
-import { OllamaAIService } from './ai-analysis/ollama-ai.service';
+import { TypeMarket } from '../models';
+
 
 @Injectable({ providedIn: 'root' })
 export class TradingLogicService {
@@ -27,16 +27,22 @@ export class TradingLogicService {
   private isFirtsCallToAI = signal<boolean>(false);
 
   private hb?: any;
-  private candlesIA: Candlestick[] = [];
+  private analysisInterval?: any;
+  private readonly ANALYSIS_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 horas
 
   constructor(
     @Inject('ITradingService') private coinexService: ITradingService,
-    // private glmAiService: GlmAiGeneralService
-    private glmAiService: OllamaAIService
+    private glmAiService: GlmAiGeneralService
+    // private glmAiService: OllamaAIService
 
   ) {
     effect(() => {
-      if (this.storeApp.candles().length > 0 && this.isFirtsCallToAI()) {
+      const hasCandles = this.storeApp.candles().length > 0;
+      const hasPrice = this.storeApp.currentPrice() > 0;
+      const isFirstCall = this.isFirtsCallToAI();
+
+      // ✅ ESPERAR PRECIO Y VELAS
+      if (hasCandles && hasPrice && isFirstCall) {
         this.runAnalysisCycle();
         this.isFirtsCallToAI.set(false);
       }
@@ -44,14 +50,63 @@ export class TradingLogicService {
   }
 
   // 1) Arranque inicial
+  // public startAnalysis(): void {
+  //   const cfg = this.storeApp.getDataMarket();
+  //   void this.switchMarket(cfg); // reutiliza el flujo de cambio
+
+  //   // Llamar al run por intervalo de tiempo
+
+  //   // this.runAnalysisCycle();
+  // }
+  // 1. INICIAR INTERVALO
   public startAnalysis(): void {
     const cfg = this.storeApp.getDataMarket();
-    void this.switchMarket(cfg); // reutiliza el flujo de cambio
+    void this.switchMarket(cfg);
 
-    // Llamar al run por intervalo de tiempo
-
-    // this.runAnalysisCycle();
+    // Iniciar intervalo de análisis
+    this.startAnalysisInterval();
   }
+
+  // 2. CONFIGURAR INTERVALO
+  private startAnalysisInterval(): void {
+    // Limpiar intervalo previo
+    this.stopAnalysisInterval();
+
+    // Intervalo basado en timeframe
+    const intervalMs = this.getAnalysisInterval();
+
+    this.analysisInterval = setInterval(() => {
+      this.runAnalysisCycle();
+    }, intervalMs);
+
+    console.log(`🔄 Análisis automático cada ${intervalMs / 60000} minutos`);
+  }
+
+  // 3. CALCULAR INTERVALO SEGÚN TIMEFRAME
+  private getAnalysisInterval(): number {
+    const marketConfig = this.storeApp.marketDataConfig();
+    const tf = marketConfig.interval.toLowerCase();
+
+    const intervals: { [key: string]: number } = {
+      '1m': 30 * 60 * 1000,     // 30 min
+      '5m': 2 * 60 * 60 * 1000, // 2 horas
+      '15m': 3 * 60 * 60 * 1000, // 3 horas
+      '1h': 4 * 60 * 60 * 1000,  // 4 horas (RECOMENDADO)
+      '4h': 6 * 60 * 60 * 1000,  // 6 horas
+      '1d': 12 * 60 * 60 * 1000, // 12 horas
+    };
+
+    return intervals[tf] || this.ANALYSIS_INTERVAL_MS;
+  }
+
+  // 4. DETENER INTERVALO
+  private stopAnalysisInterval(): void {
+    if (this.analysisInterval) {
+      clearInterval(this.analysisInterval);
+      this.analysisInterval = undefined;
+    }
+  }
+
 
   // 2) Cambio de símbolo/intervalo
   public async switchMarket(newCfg: TypeMarket) {
@@ -71,17 +126,21 @@ export class TradingLogicService {
     this.coinexService.getCandles(newCfg).subscribe(hist => {
       // ojo: setData antes de abrir WS
       this.storeApp.candles.set(hist);
-      console.log('candels 1: ', this.storeApp.candles())
+      // console.log('candels 1: ', this.storeApp.candles())
       // d) WS nuevo y recién ahí RT
       this.wSocketCoinEx.connect(newCfg);
 
       this.stateSub = this.wSocketCoinEx.getMarketState$().subscribe(s => {
+
         const st = s?.data?.state_list?.[0];
         if (!st) return;
         const price = Number(st.mark_price ?? st.last);
         if (Number.isFinite(price)) this.storeApp.currentPrice.set(price);
+        console.log('💶 :', this.storeApp.currentPrice())
         const marketInfo = s.data.state_list[0];
         this.storeApp.setMarkInfo(marketInfo);
+        // this.storeApp.currentPrice.set(price);
+
       });
 
       this.dealsSub = this.wSocketCoinEx.getDeals$().subscribe(msg => {
@@ -96,7 +155,7 @@ export class TradingLogicService {
             { timestamp: bucket, open: p, high: p, low: p, close: p, volume: +t.amount },
             ivMs
           );
-          this.storeApp.currentPrice.set(p);
+          // this.storeApp.currentPrice.set(p);
         }
       });
 
@@ -109,21 +168,34 @@ export class TradingLogicService {
     });
   }
 
-
-  public stopAnalysis(/* m?: TypeMarket */): void {
+  // 5. MODIFICAR stopAnalysis
+  public stopAnalysis(): void {
     if (!this.isRunning()) return;
 
     const m = this.storeApp.marketDataConfig();
     this.aiGlmSub?.unsubscribe();
-    // this.subscripciones.forEach(s => s.unsubscribe());
+    this.stopAnalysisInterval(); // ← NUEVA LÍNEA
     clearInterval(this.hb);
     this.wSocketCoinEx.disconnect();
     this.isRunning.set(false);
     this.storeApp.setIsLoadedAnalysis(false);
     this.storeApp.candles.set([]);
-
-    // this.paperTrading.resetPaperTrading();
   }
+
+  // public stopAnalysis(/* m?: TypeMarket */): void {
+  //   if (!this.isRunning()) return;
+
+  //   const m = this.storeApp.marketDataConfig();
+  //   this.aiGlmSub?.unsubscribe();
+  //   // this.subscripciones.forEach(s => s.unsubscribe());
+  //   clearInterval(this.hb);
+  //   this.wSocketCoinEx.disconnect();
+  //   this.isRunning.set(false);
+  //   this.storeApp.setIsLoadedAnalysis(false);
+  //   this.storeApp.candles.set([]);
+
+  //   // this.paperTrading.resetPaperTrading();
+  // }
   enableAutoTrading(): void { this.paperTrading.setAutoTrading(true); }
   disableAutoTrading(): void { this.paperTrading.setAutoTrading(false); }
 
@@ -162,7 +234,11 @@ export class TradingLogicService {
     const typeMarket = this.storeApp.marketDataConfig();
     const currentPrice = this.storeApp.currentPrice();
     const candles = this.storeApp.candles();
-    console.log('candels 2: ', candles)
+    // console.log('candels 2: ', candles);
+
+    console.log(this.storeApp.currentPrice())
+    this.paperTrading.setAutoTrading(true);
+    console.log('autoenebale')
     this.aiGlmSub =
       this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket)
         .subscribe(aiResponse => {

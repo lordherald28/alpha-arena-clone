@@ -17,13 +17,15 @@
     <section class="chart-section">
       <app-charts [candles]="candles()" [symbol]="marketInfo()!" [currentPrice]="currentPrice()!" ></app-charts>
       <!-- <app-trading-chart ></app-trading-chart> -->
-      <!-- <app-orden-list ></app-orden-list> -->
+      <app-orden-list ></app-orden-list>
       <!-- <app-test></app-test> -->
     </section>
 
     <aside class="side-panels">
       <app-paper-trading-dashboard></app-paper-trading-dashboard>
       <app-ai-response-panel ></app-ai-response-panel>
+      <app-orden-list ></app-orden-list>
+
     </aside>
   </div>
 </main>

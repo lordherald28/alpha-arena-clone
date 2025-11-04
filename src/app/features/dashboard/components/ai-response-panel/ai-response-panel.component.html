@@ -1,26 +1,52 @@
 <div class="panel">
-  <h3>Respuesta de la IA (GLM-4)</h3>
+  <h3>Análisis de Trading - Zion Capital</h3>
   @if (aiResponseHist().length > 0) {
   @for (item of aiResponseHist(); track item) {
-  <div class="response-summary">
-    <div class="decision" [class.buy]="item.decision === 'BUY'" [class.sell]="item.decision === 'SELL'"
-      [class.hold]="item.decision === 'HOLD'">
-      Decisión: <strong>{{ item.decision }}</strong>
+  <details class="trade-card">
+    <summary class="trade-summary">
+      <div class="trade-header">
+        <span class="decision-badge" [class]="item.decision.toLowerCase()">
+          {{ item.decision }}
+        </span>
+        <span class="confidence-badge">
+          {{ (item.confidence).toFixed(1) }}%
+        </span>
+        <span class="timestamp">
+          {{ date | date:'HH:mm' }}
+        </span>
+      </div>
+      <div class="strategy-info">
+        <small>{{ item.rawJson?.selected_strategy || 'ANALYSIS' }}</small>
+      </div>
+    </summary>
+
+    <div class="trade-details">
+      <div class="reason-section">
+        <strong>Análisis:</strong>
+        <p class="reason-text">{{ item.reason }}</p>
+      </div>
+
+      <details class="json-section">
+        <summary class="json-summary">Ver JSON técnico</summary>
+        <pre class="json-code">{{ item.rawJson | json }}</pre>
+      </details>
+
+      @if (item.rawJson?.risk_parameters) {
+      <div class="risk-info">
+        <strong>Gestión de Riesgo:</strong>
+        <div class="risk-grid">
+          <span>Size: ${{ item.rawJson.risk_parameters.position_size_usdt }}</span>
+          <span>SL: {{ item.rawJson.risk_parameters.stop_loss_percent }}%</span>
+          <span>TP: {{ item.rawJson.risk_parameters.take_profit_percent }}%</span>
+        </div>
+      </div>
+      }
     </div>
-    <div class="confidence">
-      Confianza: {{ (item.confidence * 100).toFixed(1) }}%
-    </div>
-    <div class="reason">
-      <strong>Razón:</strong> {{ item.reason }}
-    </div>
-  </div>
-  <details class="json-details">
-    <summary>Respuesta JSON Cruda</summary>
-    <pre>{{ item.rawJson | json }}</pre>
   </details>
   }
-
   } @else {
-  <p>Esperando análisis de la IA...</p>
+  <div class="empty-state">
+    <p>🔄 Esperando análisis del mercado...</p>
+  </div>
   }
 </div>
