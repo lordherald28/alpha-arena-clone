@@ -1,6 +1,6 @@
 // src/app/services/core/order-manager.service.ts
 
-import { Injectable, signal } from '@angular/core';
+import { effect, Injectable, signal } from '@angular/core';
 import { TradingOrder } from '../../../models';
 
 
@@ -26,7 +26,14 @@ export class OrderManagerService {
      */
     public orderHistory = signal<TradingOrder[]>([]);
 
-    constructor() { }
+    constructor() {
+        effect(() => {
+            // ver ordenes cerradas
+            if (this.orderHistory().length > 0) {
+                console.log('📖 Ordenes cerradas: ', this.orderHistory())
+            }
+        })
+    }
 
     /**
      * @description Añade una nueva orden a la lista de órdenes abiertas.

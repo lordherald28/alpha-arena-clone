@@ -3,3 +3,7 @@
     <button class="btn-test" (click)="onDesc()">Desconectar Wsocket</button>
     <button class="btn-test" (click)="onState()">Estado Wsocket</button>
 </div>
+<div>
+    <h1>Balance</h1>
+    <strong>Total USDT: {{balance().totalUSDT | currency}}</strong>
+</div>

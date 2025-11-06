@@ -7,19 +7,19 @@
     <div class="balance-items">
       <div class="balance-item">
         <span>USDT:</span>
-        <span>{{ balance.USDT | number:'1.2-2' }}</span>
+        <span>{{ paperBalance().USDT | number:'1.2-2' }}</span>
       </div>
-      <div class="balance-item">
+      <!-- <div class="balance-item">
         <span>BTC:</span>
         <span>{{ balance.BTC | number:'1.6-6' }}</span>
-      </div>
+      </div> -->
       <div class="balance-item total">
         <span>Total (USDT):</span>
         <span [class]="{
-          'positive': balance.totalUSDT > balance.USDT,
-          'negative': balance.totalUSDT < balance.USDT,
-          'neutal': balance.totalUSDT === balance.USDT
-        }">{{ balance.totalUSDT | number:'1.2-2' }}</span>
+          'positive': paperBalance().totalUSDT > paperBalance().USDT,
+          'negative': paperBalance().totalUSDT < paperBalance().USDT,
+          'neutal': paperBalance().totalUSDT === paperBalance().USDT
+        }">{{ paperBalance().totalUSDT | number:'1.2-2' }}</span>
       </div>
     </div>
     <button (click)="resetTrading()" class="btn btn-warning">🔄 Reiniciar</button>

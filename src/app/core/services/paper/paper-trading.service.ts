@@ -2,7 +2,8 @@
 
 import { computed, effect, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { TradingOrder, PaperTradingConfig, Candlestick, Balance, statusOrder, AiResponse } from '../../models';
+import { catchError, map, tap } from 'rxjs/operators';
+import { TradingOrder, PaperTradingConfig, Candlestick, Balance, statusOrder, AiResponse, TypeMarket, MarketTicksSize } from '../../models';
 import { ITradingService } from '../../base/trading-service.interface';
 import { CoinexService } from '../coinex/coinex.service';
 import { environment } from '../../../environments/environment';
@@ -13,6 +14,8 @@ import { StoreAppService } from '../../store/store-app.service';
 import { BalanceService } from '../helpers/trading/balance.service';
 import { OrderManagerService } from '../helpers/trading/order-manager.service';
 import { RiskManagementService } from '../helpers/trading/risk-management.service';
+import { environment as envProd } from '../../../environments/environment.prod';
+import { HttpClient, HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +28,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   private readonly riskManagement = inject(RiskManagementService);
   private readonly storeAppService = inject(StoreAppService);
   private readonly serviceCoinex = inject(CoinexService);
+  private readonly http = inject(HttpClient);
 
   // --- Estado Reactivo Interno del Director (Vistas del Estado Central) ---
   private readonly balance = computed(() => this.balanceService.balance());
@@ -33,12 +37,17 @@ export class PaperTradingService implements ITradingService, OnDestroy {
   public readonly orderHistory = computed(() => this.orderManagerService.orderHistory());
   private readonly currentPriceMarketSymbol = this.storeAppService.currentPrice;
   private readonly marketData = computed(() => this.storeAppService.marketDataConfig());
+  public readonly marketStatusTicksSize = signal<MarketTicksSize>({
+    tick_size: '',
+    leverage: []
+  });;
 
   // --- Estado de Control del Director ---
   // private autoTradingEnabled = signal<boolean>(false); // TODO: Pasar esto al store app, para que este centralizado
   private autoTradingEnabled = computed(() => this.storeAppService.autoTradingEnableStoreApp());
   private lastAIDecision = signal<{ decision: string, confidence: number } | null>(null);
   private config: PaperTradingConfig;
+  private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
 
   constructor() {
     this.config = {
@@ -49,6 +58,47 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     this.setupAutoOrderMonitoring();
     this.updateBalanceUser();
     this.stateAutoTrading();
+
+    // DEBUG
+    // effect(() => {
+    //   console.log('En paper trading el ticks 📏Ticks Size:📏', this.marketStatusTicksSize().tick_size);
+    // })
+  }
+
+  getMarketStatusTicksSize(marketData: TypeMarket): Observable<MarketTicksSize> {
+
+    const url = `${this.BASE_URL}/futures/market`;
+    const params = new HttpParams()
+      .set('market', marketData.market.toUpperCase())
+
+    return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } })
+      .pipe(
+        tap(response => {console.log('📏 Raw API Response:', response.data[0]);   this.marketStatusTicksSize.set(response.data[0]);}),
+        map(response => {
+
+          if (response.code === 0 && response.data) {
+            const result = {
+              leverage: response.data.leverage || [],
+              tick_size: response.data.tick_size || '0.0001', // Valor por defecto
+              market: response.data.market || marketData.market
+            };
+
+            // this.marketStatusTicksSize.set(result);
+            return result;
+          } else {
+            throw new Error(`CoinEx Error ${response.code}: ${response.message}`);
+          }
+        }),
+        catchError(error => {
+          console.error('Error fetching tick size:', error);
+          return of({
+            leverage: [],
+            tick_size: '',
+            market: ''
+          });
+        })
+
+      )
   }
 
   ngOnDestroy(): void {
@@ -86,44 +136,48 @@ export class PaperTradingService implements ITradingService, OnDestroy {
         status: statusOrder.filled
       };
 
-      // Conmutador para saber que RR aplicar TODO: Deuda tecnica
-      // switch () {
-      //   case value:
+      // ✅ Obtener el valor ACTUAL de la señal
+      const marketInfo = this.marketStatusTicksSize();
+      console.log('📏 Market Info en placeMarketOrder:', marketInfo);
 
-      //     break;
+      if (!marketInfo || !marketInfo.tick_size) {
+        console.warn('⚠️ Tick size no disponible, usando valor por defecto');
+        // Usar un valor por defecto o lanzar error
+        const defaultTickSize = '0.0001';
+        const { tp, sl } = this.riskManagement.calculateTpSlByFixedRisk(
+          order.side,
+          currentPrice,
+          { ...marketInfo, tick_size: defaultTickSize }
+        );
+        order.tp = tp;
+        order.sl = sl;
+      } else {
+        // ✅ Tick size disponible, calcular normalmente
+        const { tp, sl } = this.riskManagement.calculateTpSlByFixedRisk(
+          order.side,
+          currentPrice,
+          marketInfo
+        );
+        order.tp = tp;
+        order.sl = sl;
+      }
 
-      //   default:
-      //     break;
-      // }
-      // const { tp, sl } = this.riskManagement.calculateTpSlByPercent(params.side, currentPrice, this.config.defaultRiskPercent);
-      // order.tp = tp;
-      // order.sl = sl;
-      const { tp, sl } = this.riskManagement.calculateTpSlByFixedRisk(order.side, currentPrice);
-      order.tp = tp;
-      order.sl = sl;
-      console.log('🎯 ORDEN CREADA:', { ...order, method: 'Percent-based' });
+      console.log('🎯 ORDEN CREADA:', { ...order, method: 'FixedRisk-based' });
 
-      // Esta llamada es síncrona y no devuelve nada (void).
-      // Si hay un error (ej. margen insuficiente), lanzará una excepción.
       this.executeOrder(order);
-
-      // Si todo fue bien, devolvemos la orden creada.
       return order;
 
     } catch (error: any) {
-      // Propagamos el error para que el componente lo maneje.
-      // Es mejor manejar los errores en el componente (UI) que en el servicio (lógica).
       throw new Error(`Error al colocar la orden: ${error.message}`);
     }
   }
-
 
   /**
    * @description Recibe la decisión de la IA y la procesa para ejecutar una orden si corresponde.
    */
   processAIDecision(aiResponse: AiResponse, currentPrice: number, atr?: number): void {
 
-    console.log(`🤖 Procesando decisión de IA:`, { decision: aiResponse.decision, confidence: aiResponse.confidence });
+    // console.log(`🤖 Procesando decisión de IA:`, { decision: aiResponse.decision, confidence: aiResponse.confidence });
 
     this.lastAIDecision.set({ decision: aiResponse.decision, confidence: aiResponse.confidence });
 
@@ -186,7 +240,7 @@ export class PaperTradingService implements ITradingService, OnDestroy {
     if (this.balance().available >= order.amount) {
       this.orderManagerService.addOrder(order);
       this.balanceService.reserveFunds(order.amount);
-      console.log(`✅ ${order.side} abierta: $${order.amount} a precio ${order.price}`);
+      // console.log(`✅ ${order.side} abierta: $${order.amount} a precio ${order.price}`);
     } else {
       throw new Error(`Margen insuficiente: ${this.balance().available} USDT < ${order.amount} USDT`);
     }
@@ -219,9 +273,11 @@ export class PaperTradingService implements ITradingService, OnDestroy {
         timestamp: Date.now(),
         status: eSTATUS.FILLED
       };
-      const { tp, sl } = atr
-        ? this.riskManagement.calculateTpSlByAtr(decision, currentPrice, atr)
-        : this.riskManagement.calculateTpSlByPercent(decision, currentPrice, this.config.defaultRiskPercent);
+      // const { tp, sl } = atr
+      //   ? this.riskManagement.calculateTpSlByAtr(decision, currentPrice, atr)
+      //   : this.riskManagement.calculateTpSlByPercent(decision, currentPrice, this.config.defaultRiskPercent);
+      
+      const { tp, sl } = this.riskManagement.calculateTpSlByFixedRisk(decision, currentPrice, this.marketStatusTicksSize());
       order.tp = tp;
       order.sl = sl;
       this.executeOrder(order);

@@ -1,9 +1,9 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, of, throwError } from 'rxjs';
-import { Balance, Candlestick, TradingOrder, TypeMarket, validIntervals } from '../../models';
+import { Observable, of, throwError } from 'rxjs';
+import { Balance, Candlestick, MarketTicksSize, TradingOrder, TypeMarket, validIntervals } from '../../models';
 import { ITradingService } from '../../base/trading-service.interface';
-
+import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { environment as envProd } from '../../../environments/environment.prod';
 
@@ -15,6 +15,11 @@ export class CoinexService implements ITradingService {
 
   private readonly BASE_URL = !environment.production ? '/api' : envProd.coinex.baseUrl;
   readonly currentPriceMarketSymbol = signal<number>(0);// ← readonly para seguridad
+
+  public readonly marketStatusTicksSize = signal<MarketTicksSize>({
+    tick_size: '',
+    leverage: []
+  });
 
   private readonly VALID_INTERVALS = [
     '1min', '3min', '5min', '15min', '30min',
@@ -74,5 +79,41 @@ export class CoinexService implements ITradingService {
         }
       })
     );
+  }
+
+  getMarketStatusTicksSize(marketData: TypeMarket): Observable<MarketTicksSize> {
+
+    const url = `${this.BASE_URL}/futures/market`;
+    const params = new HttpParams()
+      .set('market', marketData.market.toUpperCase())
+
+    return this.http.get<any>(url, { params, headers: { 'Access-Control-Allow-Origin': '*' } })
+      .pipe(
+        // tap((response) => console.log('📏 ticks size price symbol: ', response)),
+        map(response => {
+
+          if (response.code === 0 && response.data) {
+            const data = response.data;
+
+            this.marketStatusTicksSize.set({
+              leverage: data.leverage,
+              tick_size: data.tick_size,
+              market: data.market
+            });
+            return data;
+          } else {
+            throw new Error(`CoinEx Error ${response.code}: ${response.message}`);
+          }
+        }),
+        catchError(error => {
+          console.error('Error fetching tick size:', error);
+          return of({
+            leverage: [],
+            tick_size: '',
+            market: ''
+          });
+        })
+
+      )
   }
 }

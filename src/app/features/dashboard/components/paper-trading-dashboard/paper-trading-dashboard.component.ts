@@ -1,5 +1,5 @@
 // components/paper-trading-dashboard/paper-trading-dashboard.component.ts
-import { Component, computed, Inject, inject, OnInit, signal, Signal } from '@angular/core';
+import { Component, computed, effect, Inject, inject, OnInit, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ITradingService } from '../../../../core/base/trading-service.interface';
@@ -23,6 +23,7 @@ export class PaperTradingDashboardComponent implements OnInit {
   // TOmar el balance del Servicio BalanceService
   private readonly balanceService = inject(BalanceService);
 
+  public paperBalance = computed(() => this.storeApp.paperBalance())
   // public balance = computed<Balance>(() => this.storeApp.paperBalance());
   public balance!: Balance
   public openOrders!: any
@@ -31,7 +32,11 @@ export class PaperTradingDashboardComponent implements OnInit {
     // @Inject('ITradingService')
     //   private paperTrading: ITradingService,
     private paperTrading: PaperTradingService
-  ) { }
+  ) { 
+    effect(() => {
+      console.log('🪙 Balance: ', this.paperBalance().totalUSDT)
+    })
+  }
 
   ngOnInit(): void {
     // this.balance = this.paperTrading.balance;

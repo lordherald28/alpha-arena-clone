@@ -19,6 +19,7 @@ export class TestComponent implements OnInit {
   // private ws = inject(WSocketCoinEx);
   private StoreAppService = inject(StoreAppService)
   private readonly marketInfo = computed(() => this.StoreAppService.marketDataConfig())
+  public readonly balance = computed(() => this.StoreAppService.paperBalance());
 
   constructor() { }
 

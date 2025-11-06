@@ -11,6 +11,7 @@ import { TestComponent } from "../../shared/components/test/test.component";
 import { ChartsComponent } from "../../shared/components/charts/charts/charts.component";
 import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
 import { OrdersPanelComponent } from "./components/orders-panel/orders-panel.component";
+import { TestBComponent } from "../../shared/components/test-b/test-b.component";
 
 @Component({
   selector: 'app-dashboard',
@@ -25,8 +26,9 @@ import { OrdersPanelComponent } from "./components/orders-panel/orders-panel.com
     ChartsComponent,
     AiResponsePanelComponent,
     OrdenListComponent,
-    // OrdersPanelComponent
-],
+    TestComponent,
+    // TestBComponent
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -39,13 +41,13 @@ export class DashboardComponent implements OnInit {
   public readonly candles = computed(() => this.storeServiceMarket.candles());
   public readonly marketInfo = computed(() => this.storeServiceMarket.MarkInfo());
   public readonly currentPrice = computed(() => this.storeServiceMarket.currentPrice());
+  public lastUpdate = computed(() => this.tradingLogic.lastUpdate()); // TODO: Debe ir en el storeApp
   // reciboDelHijo($event: string) {
   //   console.log('Mensaje recibido del hijo:', $event);
   // }
   // public candles;
   // public aiResponse;
   public isRunning;
-  // public lastUpdate;
 
   // public readonly currentPriceSymbol = inject(PaperTradingService).currentPriceMarketSymbol();
 

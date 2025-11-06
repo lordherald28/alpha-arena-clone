@@ -3,9 +3,10 @@
     <h1>ZION CAPITAL ALGORITHM</h1>
     <div class="status-info">
       <span>Estado: {{ isRunning() ? '🟢 Analizando' : '🔴 Detenido' }}</span>
-      <!-- @if (lastUpdate(); as update) {
+      @if (lastUpdate(); as update) {
       <span>Última actualización: {{ update | date:'HH:mm:ss' }}</span>
-      } -->
+      }
+      <!-- <app-test-b></app-test-b> -->
     </div>
   </header>
 
@@ -15,10 +16,10 @@
 
   <div class="main-content">
     <section class="chart-section">
+      <app-test></app-test>
       <app-charts [candles]="candles()" [symbol]="marketInfo()!" [currentPrice]="currentPrice()!" ></app-charts>
       <!-- <app-trading-chart ></app-trading-chart> -->
-      <app-orden-list ></app-orden-list>
-      <!-- <app-test></app-test> -->
+      <!-- <app-orden-list ></app-orden-list> -->
     </section>
 
     <aside class="side-panels">

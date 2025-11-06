@@ -21,9 +21,9 @@ export const environment = {
     },
     paperTrading: {
         enabled: true,
-        initialBalance: 5000,
+        initialBalance: 100,
         fee: 0.001,
-        defaultRisk: 0.05
+        defaultRisk: 0.03
     },
     glmAi: {
         apiKey: '7b9ad9add7af400e8f600a6e9c240934.S5BbL9Xq7S7vdMHN',
@@ -31,7 +31,7 @@ export const environment = {
         localUrl:'http://localhost:11434',
     },
     deepseek:{
-        apiKey:'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',
+        apiKey:'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',
         url:'https://api.deepseek.com'
     }
 };

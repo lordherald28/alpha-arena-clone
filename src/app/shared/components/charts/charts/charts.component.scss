@@ -94,3 +94,22 @@
         min-height: 300px;
     }
 }
+
+// En charts.component.scss
+
+.custom-tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none; // Para que no interfiera con el gráfico
+    z-index: 1000;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    div {
+        margin: 2px 0;
+    }
+}

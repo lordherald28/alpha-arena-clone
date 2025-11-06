@@ -1,15 +1,17 @@
 // src/app/services/core/risk-management.service.ts
 
 import { computed, inject, Injectable } from '@angular/core';
-import { AiResponse, TradingOrder } from '../../../models';
+import { AiResponse, TradingOrder, MarketTicksSize } from '../../../models';
 import {
     ATR_MULTIPLIER_SL,
     ATR_MULTIPLIER_TP,
     DESITION,
     MAX_ORDEN_OPEN,
-    MINCONFIDENCE
+    MINCONFIDENCE,
+    TICKS
 } from '../../../utils/const.utils';
 import { StoreAppService } from '../../../store/store-app.service';
+import { environment } from '../../../../environments/environment';
 
 /**
  * @description Servicio "puro" especializado en cálculos de gestión de riesgo.
@@ -25,7 +27,7 @@ export class RiskManagementService {
      * Define el riesgo absoluto que quieres asumir por operación para una RR 1:1.
      * Ajústalo según tu estrategia y el par que operes.
      */
-    private readonly FIXED_RISK_AMOUNT = 0.01; // Ejemplo: Riesgo de $0.01
+    private readonly FIXED_RISK_AMOUNT = environment.paperTrading.defaultRisk; //0.01; // Ejemplo: Riesgo de $0.01
     // =================================================================
 
     constructor() { }
@@ -37,18 +39,21 @@ export class RiskManagementService {
      * @param entryPrice Precio de entrada de la operación.
      * @returns Un objeto con los precios de TP y SL.
      */
-    public calculateTpSlByFixedRisk(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number): { tp: number; sl: number } {
+    public calculateTpSlByFixedRisk(side: 'BUY' | 'SELL' | 'HOLD', entryPrice: number, marketTicksSize: MarketTicksSize): { tp: number; sl: number } {
         const risk = this.FIXED_RISK_AMOUNT;
+        const tickSize = parseFloat(marketTicksSize.tick_size);
+
+        const moving_ticks_price = TICKS * tickSize;
 
         if (side === 'BUY') {
             // Si compramos, el SL está por debajo y el TP por encima a la misma distancia.
-            const sl = entryPrice - risk;
-            const tp = entryPrice + risk;
+            const tp = entryPrice + moving_ticks_price;
+            const sl = entryPrice - moving_ticks_price;
             return { tp, sl };
         } else { // 'SELL'
             // Si vendemos, el SL está por encima y el TP por debajo a la misma distancia.
-            const sl = entryPrice + risk;
-            const tp = entryPrice - risk;
+            const tp = entryPrice - moving_ticks_price;
+            const sl = entryPrice + moving_ticks_price;
             return { tp, sl };
         }
     }

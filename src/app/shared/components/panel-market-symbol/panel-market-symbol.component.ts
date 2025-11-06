@@ -72,8 +72,8 @@ export class PanelMarketSymbolComponent implements OnInit {
 
   ngOnInit() {
     this.cryptoPairs.set([
-      'BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'LTCUSDT', 'BCHUSDT',
-      'ADAUSDT', 'DOTUSDT', 'LINKUSDT', 'XLMUSDT', 'DOGEUSDT'
+      'BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'LTCUSDT', 'BCHUSDT','BNBUSDT','SUIUSDT',
+      'ADAUSDT', 'DOTUSDT', 'LINKUSDT', 'XLMUSDT', 'DOGEUSDT', 'SOLUSDT'
     ]);
 
     this.timeframes.set([

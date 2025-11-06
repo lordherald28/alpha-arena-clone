@@ -57,3 +57,20 @@ input::placeholder {
     font-style: italic;
     /* Opcional: para diferenciarlo más */
 }
+
+button {
+    // margin-left: auto;
+    background: #26a69a;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin: 0.25rem;
+    transition: background 0.2s;
+
+    &:hover {
+        background: #1f8a7f;
+    }
+}

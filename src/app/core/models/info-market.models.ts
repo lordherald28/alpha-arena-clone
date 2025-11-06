@@ -21,6 +21,10 @@ export interface Market {
     period: number;
 }
 
+export interface MarketTicksSize extends Partial<Market> {
+    tick_size: string;
+    leverage: string[];
+}
 export interface state_list {
     state_list: Market[];
 }

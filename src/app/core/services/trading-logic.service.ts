@@ -1,7 +1,6 @@
 // services/trading-logic.service.ts
-import { computed, effect, inject, Inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { GlmAiGeneralService } from './ai-analysis/gml-ai-general.service';
 
 import { ITradingService } from '../base/trading-service.interface';
 import { PaperTradingService } from './paper/paper-trading.service';
@@ -9,10 +8,11 @@ import { StoreAppService } from '../store/store-app.service';
 import { WSocketCoinEx } from './coinex/ws-coinex.service';
 import { LIMI_OPEN_ORDERS } from '../utils/const.utils';
 import { TypeMarket } from '../models';
+import { IAService } from '../base/ia-abstract.service';
 
 
 @Injectable({ providedIn: 'root' })
-export class TradingLogicService {
+export class TradingLogicService implements OnDestroy {
   private readonly paperTrading = inject(PaperTradingService);
   private readonly wSocketCoinEx = inject(WSocketCoinEx);
   private readonly storeApp = inject(StoreAppService);
@@ -20,12 +20,15 @@ export class TradingLogicService {
   private dealsSub?: Subscription;
   private stateSub?: Subscription;
   private aiGlmSub?: Subscription;
+  private markStatus$$?: Subscription;
+
   // private subscripciones: Subscription[] = [];
 
   public isRunning = signal<boolean>(false);
   public tradingStatus = signal({ active: false, lastOrder: null as string | null, totalTrades: 0 });
   private isFirtsCallToAI = signal<boolean>(false);
   private readonly isActiveIA = computed(() => this.storeApp.desactivarIA());
+  public lastUpdate = signal<Date | null>(null);
 
   private hb?: any;
   private analysisInterval?: any;
@@ -33,9 +36,7 @@ export class TradingLogicService {
 
   constructor(
     @Inject('ITradingService') private coinexService: ITradingService,
-    private glmAiService: GlmAiGeneralService
-    // private glmAiService: OllamaAIService
-
+    @Inject('IAService') private iaService: IAService
   ) {
     effect(() => {
       const hasCandles = this.storeApp.candles().length > 0;
@@ -52,6 +53,10 @@ export class TradingLogicService {
     effect(() => {
       console.log('Activada 🤖: ', this.isActiveIA());
     })
+  }
+
+  ngOnDestroy(): void {
+    this.markStatus$$?.unsubscribe();
   }
 
   // 1) Arranque inicial
@@ -96,12 +101,13 @@ export class TradingLogicService {
     const tf = marketConfig.interval.toLowerCase();
 
     const intervals: { [key: string]: number } = {
-      '1m': 30 * 60 * 1000,     // 30 min
-      '5m': 2 * 60 * 60 * 1000, // 2 horas
-      '15m': 3 * 60 * 60 * 1000, // 3 horas
-      '1h': 4 * 60 * 60 * 1000,  // 4 horas (RECOMENDADO)
-      '4h': 6 * 60 * 60 * 1000,  // 6 horas
-      '1d': 12 * 60 * 60 * 1000, // 12 horas
+      '1m': 30 * 60 * 1000,         // 30 min
+      '5min': 25 * 60 * 1000,        // 300,000 ms (5 minutos)
+      // '5m': 2 * 60 * 60 * 1000,  // 2 horas
+      '15m': 3 * 60 * 60 * 1000,    // 3 horas
+      '1h': 4 * 60 * 60 * 1000,     // 4 horas (RECOMENDADO)
+      '4h': 6 * 60 * 60 * 1000,     // 6 horas
+      '1d': 12 * 60 * 60 * 1000,    // 12 horas
     };
 
     return intervals[tf] || this.ANALYSIS_INTERVAL_MS;
@@ -121,6 +127,8 @@ export class TradingLogicService {
     // a) corta todo lo anterior
     this.dealsSub?.unsubscribe();
     this.stateSub?.unsubscribe();
+    this.markStatus$$?.unsubscribe();
+
 
     clearInterval(this.hb);
     await this.wSocketCoinEx.disconnect();
@@ -132,6 +140,10 @@ export class TradingLogicService {
 
     // c) histórico primero
     this.coinexService.getCandles(newCfg).subscribe(hist => {
+
+      // obtener market status ticks size
+      this.markStatus$$ = this.coinexService.getMarketStatusTicksSize(newCfg).subscribe();
+
       // ojo: setData antes de abrir WS
       this.storeApp.candles.set(hist);
       // console.log('candels 1: ', this.storeApp.candles())
@@ -144,7 +156,7 @@ export class TradingLogicService {
         if (!st) return;
         const price = Number(st.mark_price ?? st.last);
         if (Number.isFinite(price)) this.storeApp.currentPrice.set(price);
-        console.log('💶 :', this.storeApp.currentPrice())
+        // console.log('💶 :', this.storeApp.currentPrice())
         const marketInfo = s.data.state_list[0];
         this.storeApp.setMarkInfo(marketInfo);
         // this.storeApp.currentPrice.set(price);
@@ -190,22 +202,6 @@ export class TradingLogicService {
     this.storeApp.candles.set([]);
   }
 
-  // public stopAnalysis(/* m?: TypeMarket */): void {
-  //   if (!this.isRunning()) return;
-
-  //   const m = this.storeApp.marketDataConfig();
-  //   this.aiGlmSub?.unsubscribe();
-  //   // this.subscripciones.forEach(s => s.unsubscribe());
-  //   clearInterval(this.hb);
-  //   this.wSocketCoinEx.disconnect();
-  //   this.isRunning.set(false);
-  //   this.storeApp.setIsLoadedAnalysis(false);
-  //   this.storeApp.candles.set([]);
-
-  //   // this.paperTrading.resetPaperTrading();
-  // }
-  // enableAutoTrading(): void { this.paperTrading.setAutoTrading(true); }
-  // disableAutoTrading(): void { this.paperTrading.setAutoTrading(false); }
 
   // Helper canldes RT
   private startBarHeartbeat(ivMs: number) {
@@ -244,13 +240,14 @@ export class TradingLogicService {
     const candles = this.storeApp.candles();
     // console.log('candels 2: ', candles);
 
-    console.log(this.storeApp.currentPrice())
+    // console.log(this.storeApp.currentPrice())
     // this.paperTrading.setAutoTrading(true); // TODO: Apartir de ahora es el Store el que administra el trade automatico (operaciones automaticas)
     // this.storeApp.autoTradingEnableStoreApp.set(true);
-    console.log('autoenebale')
+    // console.log('autoenebale')
     this.aiGlmSub =
-      this.glmAiService.analyzeMarket(candles, accountBalance, openPositions, typeMarket)
+      this.iaService.analyzeMarket(candles, accountBalance, openPositions, typeMarket)
         .subscribe(aiResponse => {
+          this.lastUpdate.set(new Date());
           const hist = this.storeApp.aiResponseHistory();
           this.storeApp.aiResponseHistory.set([aiResponse, ...hist]);
           if (currentPrice) this.paperTrading.processAIDecision(aiResponse, currentPrice);

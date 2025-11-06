@@ -29,7 +29,7 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     const orders = this.paperTrading.getPaperOrders().open;
     const currentPrice = this.currentPrice();
 
-    console.log('🔄 Recalculando P&L - Precio actual:', currentPrice);
+    // console.log('🔄 Recalculando P&L - Precio actual:', currentPrice);
 
     return orders.map(order => ({
       ...order,
@@ -55,7 +55,7 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     // const market = 'ETHUSDT'; // Ajusta según tu mercado??
     // this.realTimePrice.connect(this.market().market);
 
-    console.log('📊 Inicializando componente de órdenes con precio real-time');
+    // console.log('📊 Inicializando componente de órdenes con precio real-time');
   }
 
   ngOnDestroy(): void {
@@ -66,26 +66,28 @@ export class OrdenListComponent implements OnInit, OnDestroy {
   private calculateCurrentPNL(order: TradingOrder, currentPrice: number | null): number {
     if (!currentPrice) return 0;
 
-    console.log('📝 Calculando P&L para orden:', {
-      id: order.id,
-      side: order.side,
-      orderPrice: order.price,
-      currentPrice: currentPrice,
-      amount: order.amount,
-      valorPosicion: order.price * order.amount
-    });
+    // console.log('📝 Calculando P&L para orden:', {
+    //   id: order.id,
+    //   side: order.side,
+    //   orderPrice: order.price,
+    //   currentPrice: currentPrice,
+    //   amount: order.amount,
+    //   valorPosicion: order.price * order.amount
+    // });
 
     let pnl = 0;
     if (order.side === DESITION.BUY) {
       // Para órdenes BUY: (Precio Actual - Precio Entrada) / Precio Entrada * 100
-      const diferenciaPrecio = currentPrice - order.price;
-      pnl = (diferenciaPrecio / order.price) * 100;
-      console.log(`💰 P&L COMPRA: ((${currentPrice} - ${order.price}) / ${order.price}) * 100 = ${pnl.toFixed(2)}%`);
+      // const diferenciaPrecio = currentPrice - order.price;
+      // pnl = (diferenciaPrecio / order.price) * 100;
+      pnl = (currentPrice - order.price) * order.amount;
+      // console.log(`💰 P&L COMPRA: ((${currentPrice} - ${order.price}) / ${order.price}) * 100 = ${pnl.toFixed(2)}%`);
     } else {
       // Para órdenes SELL: (Precio Entrada - Precio Actual) / Precio Entrada * 100  
-      const diferenciaPrecio = order.price - currentPrice;
-      pnl = (diferenciaPrecio / order.price) * 100;
-      console.log(`💰 P&L VENTA: ((${order.price} - ${currentPrice}) / ${order.price}) * 100 = ${pnl.toFixed(2)}%`);
+      // const diferenciaPrecio = order.price - currentPrice;
+      // pnl = (diferenciaPrecio / order.price) * 100;
+      pnl = (order.price - currentPrice) * order.amount;
+      // console.log(`💰 P&L VENTA: ((${order.price} - ${currentPrice}) / ${order.price}) * 100 = ${pnl.toFixed(2)}%`);
     }
 
     return pnl;
@@ -98,12 +100,9 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     const orders = this.paperTrading.getPaperOrders().open;
     const currentPrice = this.currentPrice();
 
-    console.log('🧪 TEST - Precio actual:', currentPrice);
-    console.log('🧪 TEST - Órdenes:', orders);
 
     orders.forEach(order => {
       const pnl = this.calculateCurrentPNL(order, currentPrice);
-      console.log(`🧪 TEST - Orden ${order.id} P&L: ${pnl}`);
     });
   }
 
@@ -122,11 +121,9 @@ export class OrdenListComponent implements OnInit, OnDestroy {
    */
   formatNumber(value: number | string | null | undefined, decimals: number = 2): string {
     // --- PUNTO DE DEPURACIÓN 1: Ver el valor original que llega ---
-    console.log(`[formatNumber] Valor recibido: ${value}, Tipo: ${typeof value}`);
 
     // 1. Si el valor es nulo o indefinido, devolvemos '0.00' y salimos.
     if (value === null || value === undefined) {
-      console.warn(`[formatNumber] El valor es nulo o indefinido. Devolviendo '0.00'.`);
       return '0.00';
     }
 
@@ -134,11 +131,9 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     const numericValue = typeof value === 'string' ? parseFloat(value) : value;
 
     // --- PUNTO DE DEPURACIÓN 2: Ver el valor después de la conversión ---
-    console.log(`[formatNumber] Valor después de la conversión: ${numericValue}, Tipo: ${typeof numericValue}`);
 
     // 3. Si la conversión falló (ej: era un string como "hola"), devolvemos '0.00'.
     if (isNaN(numericValue)) {
-      console.warn(`[formatNumber] El valor no es un número válido (NaN). Devolviendo '0.00'.`);
       return '0.00';
     }
 
@@ -147,7 +142,6 @@ export class OrdenListComponent implements OnInit, OnDestroy {
     const formattedValue = numericValue.toFixed(decimals);
 
     // --- PUNTO DE DEPURACIÓN 3: Ver el valor final formateado ---
-    console.log(`[formatNumber] Valor formateado con éxito: ${formattedValue}`);
 
     return formattedValue;
   }
