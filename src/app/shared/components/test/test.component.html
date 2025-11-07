@@ -1,9 +1,8 @@
 <div class="gpo-btn">
-    <button class="btn-test" (click)="onConn()">Conecntar Wsocket</button>
-    <button class="btn-test" (click)="onDesc()">Desconectar Wsocket</button>
-    <button class="btn-test" (click)="onState()">Estado Wsocket</button>
+    <button class="btn-test" (click)="nextCandle()" [disabled]="!hasNext()">
+        ▶️ Siguiente Vela
+    </button>
+    <span>Vela actual: {{ currentIndex() + 1 }}/{{ totalCandles() }}</span>
+    <button class="btn-test" (click)="loadData()">Cargar Datos BackTesting</button>
 </div>
-<div>
-    <h1>Balance</h1>
-    <strong>Total USDT: {{balance().totalUSDT | currency}}</strong>
-</div>
+<app-chart-backtesting></app-chart-backtesting>

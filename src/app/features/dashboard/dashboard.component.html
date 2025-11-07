@@ -1,6 +1,9 @@
 <main class="dashboard-container">
   <header class="dashboard-header">
     <h1>ZION CAPITAL ALGORITHM</h1>
+    <nav>
+      <button routerLink="/backtesting">Back Testing</button>
+    </nav>
     <div class="status-info">
       <span>Estado: {{ isRunning() ? '🟢 Analizando' : '🔴 Detenido' }}</span>
       @if (lastUpdate(); as update) {
@@ -16,7 +19,7 @@
 
   <div class="main-content">
     <section class="chart-section">
-      <app-test></app-test>
+      <!-- <app-test></app-test> -->
       <app-charts [candles]="candles()" [symbol]="marketInfo()!" [currentPrice]="currentPrice()!" ></app-charts>
       <!-- <app-trading-chart ></app-trading-chart> -->
       <!-- <app-orden-list ></app-orden-list> -->

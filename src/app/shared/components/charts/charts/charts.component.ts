@@ -52,6 +52,10 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
     // ✅ EFECTO que reacciona a cambios en el input
     this.reactiveInputCandlesChart();
     this.reactiveTpSlLines();
+    effect(() => {
+      const currentCandles = this.candles();
+      console.log('📊 Candles recibidas:', currentCandles?.length, currentCandles);
+    });
   }
 
   ngAfterViewInit(): void {
@@ -74,6 +78,42 @@ export class ChartsComponent implements AfterViewInit, OnDestroy {
     if (this.chart) {
       this.chart.remove();
     }
+  }
+
+  /**
+     * ✅ MÉTODO ESPECÍFICO PARA BACKTESTING
+     * Actualiza el gráfico con UNA nueva vela en modo backtesting
+     */
+  public addBacktestingCandle(candle: Candlestick): void {
+    if (!this.candlestickSeries) {
+      console.warn('📊 Gráfico no inicializado');
+      return;
+    }
+
+    const chartCandle = {
+      time: (candle.timestamp / 1000) as Time,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close
+    };
+
+    // Estrategia 1: Agregar vela a vela (para ver crecimiento progresivo)
+    this.candlestickSeries.update(chartCandle);
+
+    // Estrategia 2: Auto-scroll para seguir la vela actual
+    this.chart.timeScale().scrollToPosition(-1, false);
+  }
+
+  /**
+   * ✅ MÉTODO PARA REINICIAR BACKTESTING
+   */
+  public resetBacktesting(): void {
+    if (this.candlestickSeries) {
+      this.candlestickSeries.setData([]);
+    }
+    this.previousCandlesLength = 0;
+    this.lastVisibleRange = null;
   }
 
   /**

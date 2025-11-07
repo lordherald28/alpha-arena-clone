@@ -1,33 +1,25 @@
-import { Component, computed, effect, inject, OnInit, output } from '@angular/core';
+import { RouterLink } from "@angular/router";
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+
 import { TradingLogicService } from '../../core/services/trading-logic.service';
-import { ControlPanelComponent } from './components/control-panel/control-panel.component';
-import { TradingChartComponent } from './components/trading-chart/trading-chart.component';
 import { AiResponsePanelComponent } from './components/ai-response-panel/ai-response-panel.component';
 import { PaperTradingDashboardComponent } from './components/paper-trading-dashboard/paper-trading-dashboard.component';
 import { StoreAppService } from '../../core/store/store-app.service';
-import { PaperTradingService } from '../../core/services/paper/paper-trading.service';
-import { TestComponent } from "../../shared/components/test/test.component";
 import { ChartsComponent } from "../../shared/components/charts/charts/charts.component";
 import { OrdenListComponent } from "../../shared/components/orden-list/orden-list.component";
-import { OrdersPanelComponent } from "./components/orders-panel/orders-panel.component";
-import { TestBComponent } from "../../shared/components/test-b/test-b.component";
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
     CommonModule,
-    // ControlPanelComponent,
-    // TradingChartComponent, // TODO: Ver que hacer, eliminar
     AiResponsePanelComponent, // TODO: Ver que hacer, componente list ai response panel
     PaperTradingDashboardComponent,
-    // TestComponent,
     ChartsComponent,
     AiResponsePanelComponent,
     OrdenListComponent,
-    TestComponent,
-    // TestBComponent
+    RouterLink
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

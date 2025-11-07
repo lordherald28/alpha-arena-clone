@@ -1,41 +1,62 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-// import { WSocketCoinEx } from '../../../core/services/coinex/ws-coinex.service.ts_backup';
-import { StoreAppService } from '../../../core/store/store-app.service';
+import { Component, computed, effect, inject, OnInit, signal, ViewChild } from '@angular/core';
 
+
+import { StoreAppService } from '../../../core/store/store-app.service';
+import { BackTestingService } from '../../../core/services/back-testing/back-testing.service';
+import { Candlestick } from '../../../core/models';
+import { ChartBacktestingComponent } from '../charts/chart-backtesting/chart-backtesting.component';
 
 
 
 @Component({
   selector: 'app-test',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ChartBacktestingComponent],
   templateUrl: './test.component.html',
   styleUrls: ['./test.component.scss']
 })
 export class TestComponent implements OnInit {
+  // INJECT
+  private readonly backtesting = inject(BackTestingService);
+  private readonly storeAppService = inject(StoreAppService);
 
+  // ✅ VIEW CHILD para acceder a los métodos del componente de gráfico
+  @ViewChild(ChartBacktestingComponent) chartComponent!: ChartBacktestingComponent;
 
-  // private ws = inject(WSocketCoinEx);
-  private StoreAppService = inject(StoreAppService)
-  private readonly marketInfo = computed(() => this.StoreAppService.marketDataConfig())
-  public readonly balance = computed(() => this.StoreAppService.paperBalance());
+  // SIGNAL (simplificada - ya no necesitas la signal candles)
+  public currentIndex = computed(() => this.backtesting.currentIndex() + 1);
+  public totalCandles = computed(() => this.backtesting.allCandles().length);
+  public hasNext = this.backtesting.hasNext;
 
-  constructor() { }
+  // COMPUTED
+  private readonly marketInfo = computed(() => this.storeAppService.marketDataConfig())
+  public readonly balance = computed(() => this.storeAppService.paperBalance());
+
+  constructor() {
+    // ✅ EFECTO SIMPLIFICADO: Solo pasa la vela al componente de gráfico
+    effect(() => {
+      const candle = this.backtesting.currentCandle();
+      if (candle && this.chartComponent) {
+        this.chartComponent.addBacktestingCandle(candle);
+      }
+    });
+  }
 
   ngOnInit() {
-    // this.ws.messageSubs.set({ id: Date.now().toString(), method: 'state.subscribe', params: { 'market_list': ['BTCUSDT'] } })
+    // Tu lógica de inicialización...
   }
 
-  onConn(): void {
-    // this.ws.connect(this.marketInfo());
+  nextCandle(): void {
+    this.backtesting.next();
+    // El effect se encargará de actualizar el gráfico automáticamente
   }
 
-  onState() {
-    // console.log(this.ws.state);
+  loadData(): void {
+    this.backtesting.getHistoricalData(this.marketInfo().market).subscribe(() => {
+      // ✅ OPCIONAL: Resetear el gráfico cuando cargas nuevos datos
+      this.chartComponent?.resetBacktesting();
+    });
   }
 
-  onDesc() {
-    // this.ws.disconnect(this.marketInfo());
-  }
 }
